@@ -1,8 +1,21 @@
-# Acelerador AES com interface SPI — Semana 1
+# Acelerador AES com interface SPI — Semanas 1 e 2
 
-Entrega de estudo e preparação do ambiente. O único circuito é uma XOR combinacional; a implementação AES começa nas próximas semanas.
+Projeto acadêmico de RTL e baixo consumo. A Semana 1 está concluída, validada e versionada em `w01-v1.0`. A Semana 2 contém a arquitetura v1.0 proposta para defesa; ainda depende da confirmação dos requisitos essenciais, da apresentação ao verificador e da aprovação do instrutor. O único circuito implementado continua sendo uma XOR combinacional.
 
 O fluxo aberto foi executado com sucesso em Windows x64: lint, compilação e simulação, com quatro casos autochecking e sem warnings no smoke. Consulte os [resultados e limitações](docs/reports/semana_01_validacao.md).
+
+## Entrega da Semana 2
+
+- [Arquitetura v1.0](docs/architecture/arquitetura_v1.0.md): blocos, Mermaid, interfaces, reset/CDC, microarquitetura, mapa, protocolo, latência e riscos.
+- [12 registros de decisão](docs/architecture/decisoes_semana_02.md).
+- [Diagnóstico anterior às alterações](docs/reports/semana_02_diagnostico.md).
+- [Defesa: roteiro curto e 100 perguntas com respostas](docs/reports/semana_02_defesa.md).
+- [Pacote de apresentação ao verificador](docs/reports/semana_02_verificador.md).
+- [Relatório da entrega e verificações](docs/reports/semana_02.md).
+
+Baseline provisória: AES-128 e somente cifragem são hipóteses funcionais; SPI modo 0 é baseline provisório; reset ativo baixo e expansão de chave adiantada são decisões arquiteturais provisórias; 16 + 4 S-boxes são hipótese a validar por síntese. Nenhuma dessas escolhas é requisito oficial confirmado. O contrato proposto usa uma rodada por ciclo, banco SPI de 32 bits e handshake de quatro fases com dados estáveis.
+
+A contagem revisada distingue **11 ciclos de cálculo** entre aceitação local em E0 e publicação de `done`/`data_out` após E11, **captura pelo adaptador em E12** e **quatro estados da FSM**. A latência até STATUS.DONE inclui SPI/CDC e é variável. Nenhum datapath AES ou SPI funcional foi implementado nesta etapa.
 
 ## Executar
 
@@ -89,11 +102,17 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 |-- docs/
 |   |-- spec/pendencias.md
 |   |-- architecture/README.md
+|   |-- architecture/arquitetura_v1.0.md
+|   |-- architecture/decisoes_semana_02.md
 |   |-- reports/
 |       |-- semana_01.md
 |       |-- semana_01_defesa.md
 |       |-- semana_01_validacao.md
 |       |-- semana_01_alteracoes.md
+|       |-- semana_02.md
+|       |-- semana_02_diagnostico.md
+|       |-- semana_02_defesa.md
+|       |-- semana_02_verificador.md
 |-- rtl/smoke_top.sv
 |-- tb/tb_smoke_top.sv
 |-- formal/README.md
@@ -108,7 +127,7 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 |-- .gitignore
 ```
 
-`build/`, `obj_dir/`, ondas e `.tools/` são artefatos locais ignorados pelo Git. O repositório Git foi inicializado localmente, sem commit ou remoto. A pasta duplicada recebida foi normalizada para esta raiz; consulte o [inventário de alterações](docs/reports/semana_01_alteracoes.md).
+`build/`, `obj_dir/`, ondas e `.tools/` são artefatos locais ignorados pelo Git. A base inspecionada para a Semana 2 está em `de477dd`, com a tag `w01-v1.0`. A descrição “sem commit ou remoto” dos relatórios da Semana 1 registra o estado histórico daquela preparação. A pasta duplicada recebida foi normalizada para esta raiz; consulte o [inventário de alterações](docs/reports/semana_01_alteracoes.md).
 
 ## O que cada alvo faz
 
@@ -133,6 +152,6 @@ As variáveis `VERILATOR`, `IVERILOG` e `VVP` permitem escolher executáveis no 
 - [Requisitos confirmados e decisões pendentes](docs/spec/pendencias.md).
 - [Backlog](BACKLOG.md).
 
-AES-128 é exemplo didático; variantes, cifragem/decifragem, SPI, reset, frequências, registradores, arquitetura, S-box, Key Expansion e CDC não foram fixados. Não foram executados síntese, formal, análise física de CDC ou medição de potência. PDK e ferramentas oficiais do instrutor permanecem a informar.
+Na Semana 1 as escolhas funcionais ficaram abertas; na Semana 2 receberam propostas e hipóteses explícitas, rastreadas em [pendencias.md](docs/spec/pendencias.md). Variantes/operações, compatibilidade do mestre, frequências, metas físicas, PDK e ferramentas oficiais ainda precisam de confirmação. Não foram executados síntese, formal, análise física de CDC ou medição de potência.
 
 Referências principais: [NIST FIPS 197-upd1](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf) e [Analog Devices: SPI](https://www.analog.com/en/resources/analog-dialogue/articles/introduction-to-spi-interface.html). Distribuições usadas: [OSS CAD Suite](https://github.com/YosysHQ/oss-cad-suite-build) e [GNU Make do MSYS2](https://packages.msys2.org/packages/make).
