@@ -1,0 +1,6 @@
+# Generic synthesizability check. Requires the Yosys slang frontend for SV packages.
+# No technology library, timing constraints, PLL or physical estimates.
+read_slang --top minisoc_aes_dp rtl/minisoc_aes/aes_transforms_pkg.sv rtl/minisoc_aes/minisoc_aes_dp.sv
+synth -top minisoc_aes_dp -noabc
+check -assert
+stat

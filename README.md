@@ -1,21 +1,49 @@
-# Acelerador AES com interface SPI — Semanas 1 e 2
+# MiniSoC AES — arquitetura revisada e datapath
 
-Projeto acadêmico de RTL e baixo consumo. A Semana 1 está concluída, validada e versionada em `w01-v1.0`. A Semana 2 contém a arquitetura v1.0 proposta para defesa; ainda depende da confirmação dos requisitos essenciais, da apresentação ao verificador e da aprovação do instrutor. O único circuito implementado continua sendo uma XOR combinacional.
+A Semana 1 validou o ambiente com uma XOR. A Semana 2 recebeu uma
+[arquitetura v1.1](docs/architecture/arquitetura_v1.1.md) revisada após leitura
+do Block Guide v1.0.0; **segue sem apresentação/aceite registrados**.
+A Semana 3 implementa transformações e rodada combinacional AES-128
+forward/inverse, com testes autochecking. O SoC integrado ainda não existe.
 
-O fluxo aberto foi executado com sucesso em Windows x64: lint, compilação e simulação, com quatro casos autochecking e sem warnings no smoke. Consulte os [resultados e limitações](docs/reports/semana_01_validacao.md).
+## Documentação vigente
 
-## Entrega da Semana 2
+- [Arquitetura v1.1](docs/architecture/arquitetura_v1.1.md): contratos, quatro grupos de portas, clocks, RAM, SPI, modos e interface do datapath.
+- [Retomada, auditoria e checklist de defesa](docs/reports/semana_02_retomada.md).
+- [ADRs e supersessão das decisões antigas](docs/architecture/decisoes_semana_02.md).
+- [Pendências e perguntas OPEN](docs/spec/pendencias.md).
+- [Semana 3: implementação e testes reais](docs/reports/semana_03.md).
+- [Backlog](BACKLOG.md).
 
-- [Arquitetura v1.0](docs/architecture/arquitetura_v1.0.md): blocos, Mermaid, interfaces, reset/CDC, microarquitetura, mapa, protocolo, latência e riscos.
-- [12 registros de decisão](docs/architecture/decisoes_semana_02.md).
-- [Diagnóstico anterior às alterações](docs/reports/semana_02_diagnostico.md).
-- [Defesa: roteiro curto e 100 perguntas com respostas](docs/reports/semana_02_defesa.md).
-- [Pacote de apresentação ao verificador](docs/reports/semana_02_verificador.md).
-- [Relatório da entrega e verificações](docs/reports/semana_02.md).
+O contrato revisado prevê AES-128 cipher/inverse, seis modos, 1..256 blocos
+em RAM 1024 x 32 in-place; SPI Mode 0 com frames de 40 bits configura/monitora
+o sistema. MEMORY DATA transfere os blocos. PLL, memória, SPI, Key Expansion
+e controlador AES permanecem para implementação posterior.
 
-Baseline provisória: AES-128 e somente cifragem são hipóteses funcionais; SPI modo 0 é baseline provisório; reset ativo baixo e expansão de chave adiantada são decisões arquiteturais provisórias; 16 + 4 S-boxes são hipótese a validar por síntese. Nenhuma dessas escolhas é requisito oficial confirmado. O contrato proposto usa uma rodada por ciclo, banco SPI de 32 bits e handshake de quatro fases com dados estáveis.
+A [arquitetura v1.0](docs/architecture/arquitetura_v1.0.md) e os materiais de
+defesa de 09/10 são históricos superados. Seu mapa, frame de 48 bits, máscaras,
+domínio do banco e cronograma não são contratos vigentes. O PDF confidencial
+e a revisão técnica recebidos não integram o repositório.
 
-A contagem revisada distingue **11 ciclos de cálculo** entre aceitação local em E0 e publicação de `done`/`data_out` após E11, **captura pelo adaptador em E12** e **quatro estados da FSM**. A latência até STATUS.DONE inclui SPI/CDC e é variável. Nenhum datapath AES ou SPI funcional foi implementado nesta etapa.
+## Testar o datapath AES
+
+Com o toolchain no PATH: `make test-aes-dp`. Esse alvo encadeia
+`lint-aes-dp` → `compile-aes-dp` → `sim-aes-dp`, inclusive com `make -j4`.
+Em Windows com a instalação portátil já existente:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_aes_dp.ps1
+```
+
+Resultado observado em 29/10/2026: **2.345 verificações PASS**, incluindo
+quatro cifragens e quatro decifragens com constantes NIST, sem warnings no
+fluxo final. Veja os [vetores e seus oráculos independentes](tb/vectors/README.md).
+O TB fornece chaves e reaplica a rodada; isso não implementa uma FSM/SoC.
+`bash scripts/run_aes_dp.sh` também localiza a raiz automaticamente.
+
+`make synth-aes-dp` executa uma síntese genérica opcional com Yosys/slang.
+Foi executada com zero problemas no check; não usa PDK, não mede área física
+e não valida timing dos clocks do PLL. Yosys não é dependência do smoke/AES sim.
 
 ## Executar
 
@@ -103,6 +131,7 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 |   |-- spec/pendencias.md
 |   |-- architecture/README.md
 |   |-- architecture/arquitetura_v1.0.md
+|   |-- architecture/arquitetura_v1.1.md
 |   |-- architecture/decisoes_semana_02.md
 |   |-- reports/
 |       |-- semana_01.md
@@ -113,6 +142,11 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 |       |-- semana_02_diagnostico.md
 |       |-- semana_02_defesa.md
 |       |-- semana_02_verificador.md
+|       |-- semana_02_retomada.md
+|       |-- semana_03.md
+|-- rtl/minisoc_aes/{aes_transforms_pkg.sv,minisoc_aes_dp.sv}
+|-- tb/minisoc_aes_dp_tb.sv
+|-- tb/vectors/README.md
 |-- rtl/smoke_top.sv
 |-- tb/tb_smoke_top.sv
 |-- formal/README.md
@@ -121,6 +155,9 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 |-- scripts/
 |   |-- run_smoke.sh
 |   |-- run_smoke.ps1
+|   |-- run_aes_dp.sh
+|   |-- run_aes_dp.ps1
+|   |-- synth_aes_dp.ys
 |   |-- activate_tools.ps1
 |   |-- bootstrap_windows.ps1
 |-- .gitattributes
@@ -137,10 +174,15 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 | `make lint` | Verifica ferramentas e executa Verilator no RTL |
 | `make compile` | Inclui lint e gera build/smoke.vvp com Icarus |
 | `make sim` | Inclui lint e compilação antes de executar vvp |
+| `make test-aes-dp` | Lint, compilação e simulação autochecking do datapath AES |
+| `make lint-aes-dp` | Verilator no package e módulo de rodada |
+| `make compile-aes-dp` | Lint e compilação Icarus, sem executar a simulação |
+| `make sim-aes-dp` | Compila e executa o testbench AES |
+| `make synth-aes-dp` | Síntese genérica opcional e check no Yosys com frontend slang |
 | `make versions` | Mostra versões reais das ferramentas |
-| `make clean` | Remove somente build/smoke.vvp; preserva fontes, ferramentas e logs |
+| `make clean` | Remove build/smoke.vvp e build/aes_dp.vvp; preserva fontes, ferramentas e logs |
 
-As variáveis `VERILATOR`, `IVERILOG` e `VVP` permitem escolher executáveis no PATH. Para ferramentas em caminhos com espaços, prefira ativar o diretório no PATH e usar o nome do executável.
+As variáveis `VERILATOR`, `IVERILOG`, `VVP` e `YOSYS` permitem escolher executáveis no PATH. Para ferramentas em caminhos com espaços, prefira ativar o diretório no PATH e usar o nome do executável.
 
 `bash scripts/run_smoke.sh` também executa o fluxo e localiza a raiz independentemente do diretório de chamada. Não depende do bit executável do arquivo em uma extração ZIP.
 
@@ -152,6 +194,8 @@ As variáveis `VERILATOR`, `IVERILOG` e `VVP` permitem escolher executáveis no 
 - [Requisitos confirmados e decisões pendentes](docs/spec/pendencias.md).
 - [Backlog](BACKLOG.md).
 
-Na Semana 1 as escolhas funcionais ficaram abertas; na Semana 2 receberam propostas e hipóteses explícitas, rastreadas em [pendencias.md](docs/spec/pendencias.md). Variantes/operações, compatibilidade do mestre, frequências, metas físicas, PDK e ferramentas oficiais ainda precisam de confirmação. Não foram executados síntese, formal, análise física de CDC ou medição de potência.
+As dúvidas funcionais originalmente abertas foram reavaliadas frente ao Block
+Guide; a evolução e as questões ainda OPEN estão nas pendências. Não foram
+executados síntese mapeada, formal, análise física de CDC ou medição de potência.
 
 Referências principais: [NIST FIPS 197-upd1](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf) e [Analog Devices: SPI](https://www.analog.com/en/resources/analog-dialogue/articles/introduction-to-spi-interface.html). Distribuições usadas: [OSS CAD Suite](https://github.com/YosysHQ/oss-cad-suite-build) e [GNU Make do MSYS2](https://packages.msys2.org/packages/make).

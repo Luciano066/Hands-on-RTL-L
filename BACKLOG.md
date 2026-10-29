@@ -1,11 +1,8 @@
-# Backlog — Acelerador AES + SPI
+# Backlog — MiniSoC AES
 
-## Convenção e escopo
-
-- [ ] Pendente, sem afirmar implementação.
-- [x] Entregue ou validado com evidência.
-
-Os requisitos da Semana 2 seguem o pedido atual, com aceite pela defesa aprovada pelo instrutor. As semanas 3 a 6 preservam o planejamento preliminar recebido; datas e critérios finais dependem do curso. As decisões abertas e as baselines propostas estão em [P01–P13](docs/spec/pendencias.md).
+Atualização: 29/10/2026. [x] indica execução/evidência técnica; aceite humano
+é listado separadamente. Fonte funcional: Block Guide v1.0.0 local confidencial.
+Contrato atual: [arquitetura v1.1](docs/architecture/arquitetura_v1.1.md).
 
 ## Semana 1 — Estudo, ambiente e entrega — concluída
 
@@ -25,100 +22,65 @@ Base validada e versionada: tag `w01-v1.0`, HEAD inicial desta entrega `de477dd`
 - [x] Elaborar defesa com decisões, alternativas, trade-offs e 60 perguntas.
 - [x] Registrar explicitamente decisões funcionais pendentes.
 
-## Dependências do curso, sem bloquear o smoke aberto
+## Semana 2 — arquitetura revisada, aceite pendente
 
-- [ ] Receber especificação funcional e critérios de aceite das próximas etapas.
-- [ ] Identificar e validar ferramentas oficiais fornecidas pelo instrutor, se diferentes.
-- [ ] Registrar tecnologia e versão do PDK/FPGA quando informadas; o smoke não usa PDK.
-- [ ] Confirmar política de branches, publicação e aceite das próximas tags, se exigida pelo curso.
+- [x] Auditar main/faaf745, árvore limpa e fontes da Semana 2.
+- [x] Ler integralmente Block Guide e revisão técnica recebidos.
+- [x] Criar branch dedicada à revisão arquitetural v1.1 e preservar arquitetura v1.0.
+- [x] Corrigir escopo, portas, clocks/reset, SPI, mapa, RAM e cipher/inverse/modos.
+- [x] Registrar supersessão dos ADRs e questões P14–P27 com perguntas verificáveis.
+- [x] Preparar checklist/roteiro no relatório de retomada.
+- [ ] Apresentar ao parceiro de DV e registrar divergências/concordância real.
+- [ ] Obter respostas do instrutor aos pontos OPEN de integração.
+- [ ] Defender, incorporar correções e registrar aprovação do instrutor.
 
-## Semana 2 — Arquitetura e microarquitetura — em revisão, não concluída
+As entregas documentais anteriores continuam históricas. Frame de 48 bits,
+mapa em bytes, VALID_MASK e payload SPI foram substituídos. Confirmação de
+requisitos no guia não encerra a Semana 2.
 
-### Material preparado
+## Semana 3 — datapath implementado e testado, aceite pendente
 
-- [x] Ler toda a Semana 1 e registrar [diagnóstico antes das alterações](docs/reports/semana_02_diagnostico.md).
-- [x] Definir proposta de diagrama Mermaid e interfaces entre módulos.
-- [x] Definir proposta de dois clocks independentes, reset e inicialização com SCLK pausável.
-- [x] Comparar pulse/toggle/handshake/FIFO/shadow registers e especificar captura estável com quatro fases.
-- [x] Comparar arquiteturas iterativa, serializada, parcialmente e totalmente desenrolada.
-- [x] Escolher baseline iterativa e justificar recursos, timing, vazão e consumo sem métricas inventadas.
-- [x] Comparar S-box e Key Expansion; alinhar organização de 16 + 4 S-boxes com o cronograma.
-- [x] Fixar empacotamento do State e cronograma E0–E11 no contrato proposto.
-- [x] Definir interface do núcleo, protocolo SPI, mapa, máscaras e START/BUSY/DONE/ERROR.
-- [x] Preparar [arquitetura v1.0](docs/architecture/arquitetura_v1.0.md) e [12 ADRs](docs/architecture/decisoes_semana_02.md).
-- [x] Preparar [defesa curta e 100 perguntas/respostas](docs/reports/semana_02_defesa.md).
-- [x] Registrar 20 riscos com criticidade/mitigação e perguntas ao professor.
-- [x] Preparar [pacote do verificador](docs/reports/semana_02_verificador.md) com contratos, pauta e testes futuros.
+- [x] Implementar SubBytes, ShiftRows, MixColumns e AddRoundKey.
+- [x] Implementar InvSubBytes, InvShiftRows e InvMixColumns.
+- [x] Compor rodada inicial, normal e final forward/inverse em RTL combinacional.
+- [x] Verificar ordem por colunas e empacotamento das quatro palavras.
+- [x] Testar 256 entradas S-box/inversa com oráculo algébrico independente.
+- [x] Testar misturas por matriz independente, base linear e estados determinísticos.
+- [x] Conferir estados intermediários e quatro KATs NIST em ambos os sentidos.
+- [x] Adicionar alvos Make/scripts AES e executar lint/sim e regressão XOR.
+- [x] Registrar versões, comandos, resultados e limites em semana_03.md.
+- [ ] Apresentar resultados e obter aceite do instrutor.
 
-### Decisões propostas
+## Semana 4 — expansão e controle AES
 
-AES-128 e somente cifragem são hipóteses funcionais; SPI modo 0 é baseline provisório; reset ativo baixo e expansão adiantada são decisões arquiteturais provisórias; 16 + 4 S-boxes são hipótese a validar por síntese. Nenhuma dessas escolhas é requisito oficial confirmado. O contrato provisório usa datapath de 128 bits, banco de palavras de 32 bits em SCLK, núcleo em clk_sys e handshake de quatro fases. DONE sticky e máscaras de completude pertencem ao banco.
+- [ ] Implementar minisoc_aes_key_exp.sv e comparar K0..K10 com FIPS A.1.
+- [ ] Definir armazenamento/cache e acesso reverso às chaves sem alterar a ordem INVCIPHER.
+- [ ] Implementar registradores e controlador sequencial do AES; testar reset, enables e última rodada.
+- [ ] Validar KATs cipher/inverse e estabilidade/handshake da interface interna.
+- [ ] Planejar controlador de modos, guarda de ciphertext original e RAM in-place.
 
-### Revisão documental solicitada antes da defesa
+## Semana 5 — SPI, controle e CDC
 
-- [x] Uniformizar status provisório das seis escolhas nos documentos atuais, preservando o histórico da Semana 1.
-- [x] Separar 11 ciclos de cálculo/publicação E0–E11, captura em E12 e quatro estados da FSM; DONE SPI possui latência variável.
-- [x] Justificar 16 + 4 S-boxes, compartilhamento e validação futura por síntese/STA/atividade.
-- [x] Explicitar onze etapas do handshake, origem/destino, sinais de dois FF e dados multibit estáveis.
-- [x] Manter reset SPI com SCLK parado como risco alto aberto, comparar alternativas e formular pergunta obrigatória ao professor.
-- [x] Distinguir done/DONE/BUSY, comparar políticas de limpeza e detalhar KEY_VALID_MASK/DATA_IN_VALID_MASK.
-- [x] Classificar natureza de cada registrador e ampliar riscos de variante, decifragem, SPI, frequências e tecnologia.
-- [x] Reexecutar smoke sem warnings; conferir links, dois diagramas Mermaid em renderizador compatível, endereços e status das decisões; confirmar hashes dos 16 arquivos preservados da Semana 1.
+- [ ] Resolver P14/P21/P22/P24/P25 com instrutor e DV antes de fixar o protocolo detalhado.
+- [ ] Implementar minisoc_spi.sv: Mode 0, frame de 40 bits, read em duas transações.
+- [ ] Implementar mapa oficial, banco always-on e transporte de frame por evento/toggle.
+- [ ] Testar abort/back-to-back/reset/clocks pausados e ausência de commit duplicado.
+- [ ] Implementar snapshots de configuração/status com verificação de coerência CDC.
 
-### Pendências essenciais e aceite
+## Semana 6 — memória, PLL e integração
 
-- [ ] Confirmar com o instrutor AES-128, operações e eventual modo criptográfico (P01/P02/P13).
-- [ ] Confirmar compatibilidade do mestre com SPI modo 0, frame e clocks de inicialização (P03/P05/P06).
-- [ ] Obter frequências/temporização, metas físicas, tecnologia e ferramentas de validação (P04/P11/P12); registrar o que é necessário para aprovação arquitetural e o que será detalhado na implementação.
-- [ ] Apresentar a arquitetura ao verificador parceiro e registrar concordância/divergências reais.
-- [ ] Realizar defesa, incorporar correções e registrar **aprovação do instrutor**.
-- [ ] Encerrar a Semana 2 somente após os itens essenciais de aceite.
+- [ ] Resolver contrato idle/mux de clock da RAM e latência de leitura (P18/P19).
+- [ ] Implementar RAM 1024 x 32 sem reset, ownership exclusivo e acesso externo síncrono.
+- [ ] Implementar PLL mock /1,/2,/4,/8, lock e sequência de reset aprovada.
+- [ ] Implementar seis modos, 1..256 blocos, erros e processamento in-place.
+- [ ] Integrar minisoc_top.sv apenas com portas oficiais e testar ponta a ponta.
+- [ ] Testar limites 0/1/256/257, modos reservados, feedback e troca de owner.
+- [ ] Executar análise CDC/RDC e clock com ferramentas/restrições apropriadas.
 
-### Perguntas para levar ao professor
+## Critérios e etapas físicas futuras
 
-- Quais variantes, cifragem/decifragem e modos são exigidos?
-- O mestre aceita o mapa/protocolo, clocks com CS_N alto na inicialização e polling para liberar o handshake?
-- Reset ativo baixo comum aos domínios é compatível? Há reset independente? **Quem fornece SCLK para liberar reset se o mestre estiver parado, e qual alternativa adotar se ele não fornecer clocks com CS_N alto?**
-- Quais frequências, duty cycle, setup/hold, latência, vazão, área, energia e MTBF são exigidos?
-- Qual PDK/FPGA e quais ferramentas de síntese, formal, CDC/RDC e UPF serão usados?
-- Há requisito de proteger leitura da chave, zeroização ou canais laterais?
-- Como registrar o aceite do instrutor e a revisão do parceiro?
-
-Relatório da entrega e limites da verificação: [semana_02.md](docs/reports/semana_02.md). Não antecipar as implementações abaixo para esta entrega.
-
-## Semana 3 — Datapath AES
-
-- [ ] Implementar SubBytes.
-- [ ] Implementar ShiftRows.
-- [ ] Implementar MixColumns.
-- [ ] Implementar AddRoundKey.
-- [ ] Testar funções com referências oficiais e conferir estados intermediários.
-
-## Semana 4 — Key Expansion e controle
-
-- [ ] Implementar expansão de chave conforme variantes aprovadas.
-- [ ] Implementar FSM/controle, incluindo a distinção da última rodada.
-- [ ] Integrar datapath, key schedule e controle.
-- [ ] Validar round keys e vetores oficiais nas operações suportadas.
-
-## Semana 5 — SPI e interface de controle
-
-- [ ] Implementar SPI conforme CPOL/CPHA, ordem dos dados e temporização definidos.
-- [ ] Implementar mecanismo de CDC aprovado e verificar reset/domínios.
-- [ ] Implementar banco de registradores ou alternativa aprovada.
-- [ ] Testar leitura/escrita, limites de transação e comandos durante busy.
-
-## Semana 6 — Integração
-
-- [ ] Integrar SPI, interface de controle e AES.
-- [ ] Criar teste ponta a ponta com referência independente.
-- [ ] Executar análise de CDC com ferramentas e restrições apropriadas.
-- [ ] Revisar cobertura e critérios antes de congelar RTL v1.0.
-
-## Etapas futuras — Baixo consumo e implementação física
-
-- [ ] Definir metas de área, timing, potência e energia por operação.
-- [ ] Obter resultados de referência com estímulos representativos.
-- [ ] Avaliar clock enable, isolamento de operandos e gating conforme tecnologia.
-- [ ] Descrever UPF caso existam domínios de potência que o exijam.
-- [ ] Validar equivalência/comportamento e medir ganhos das técnicas escolhidas.
+- [ ] Confirmar tecnologia/PDK, ferramentas oficiais e IP AES de referência (P27).
+- [ ] Definir metas e medir síntese, timing, potência e energia com atividade representativa.
+- [ ] Avaliar enables, isolamento e células seguras de gating; não usar mux/gating combinacional ingênuo.
+- [ ] Definir UPF somente após requisitos reais de alimentação/retenção/isolamento.
+- [ ] Criar tags de entrega somente com status técnico/humano explícito; sem push/merge automático.
