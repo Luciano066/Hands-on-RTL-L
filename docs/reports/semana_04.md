@@ -1,6 +1,6 @@
 # Semana 4 — Key Expansion e controle sequencial AES-128
 
-Data: 29/10/2026. Entrega: expansão e controle sequencial AES-128.
+Data: 29/10/2026. Base inicial: `be42888`; revisão da entrega: `5818891`.
 **Marco técnico implementado e validado; aprovação do instrutor pendente.**
 Semanas 2 e 3 continuam com os respectivos aceites humanos pendentes.
 

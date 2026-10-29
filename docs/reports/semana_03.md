@@ -1,6 +1,6 @@
 # Semana 3 — Datapath AES-128 forward/inverse
 
-Data da execução: 29/10/2026. Entrega: datapath AES-128.
+Data da execução: 29/10/2026. Revisão de referência: `be42888`.
 **RTL do marco implementado e testado; aceite do instrutor pendente.**
 A Semana 2 permanece sem apresentação/aprovação registradas.
 
