@@ -1,3 +1,9 @@
+> **Histórico de 09/10/2026, contrato v1.0 superado.** Em 29/10/2026,
+> a leitura do Block Guide motivou a [arquitetura v1.1](../architecture/arquitetura_v1.1.md).
+> Use o [relatório/roteiro de retomada](semana_02_retomada.md) para a defesa atual
+> e o [relatório da Semana 3](semana_03.md) para os testes AES. Semana 2 segue
+> sem apresentação/aceite registrados. As afirmações abaixo descrevem a entrega antiga.
+
 # Entrega documental e revisão — Semana 2
 
 Data: 09/10/2026. Base inicial: `de477dd`, tag `w01-v1.0`, árvore limpa antes das edições.

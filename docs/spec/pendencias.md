@@ -1,5 +1,55 @@
 # Escopo confirmado e decisões pendentes
 
+## Situação vigente — 29/10/2026
+
+Fonte primária recebida e lida: Block Guide MiniSoC AES v1.0.0 (15 páginas,
+confidencial). Revisão técnica recebida e lida como interpretação proposta.
+Contrato vigente: [arquitetura v1.1](../architecture/arquitetura_v1.1.md).
+R = requisito da fonte; D = decisão proposta; H = hipótese; P = pendência OPEN.
+As seções posteriores à tabela atual são histórico de 09/10/2026.
+
+| IDs antigos | Evolução frente ao guia |
+|---|---|
+| P01/P02/P13 | R: AES-128 cipher/inverse, seis modos e 1..256 blocos; escopo principal respondido |
+| P03/P05 | R: Mode 0 MSB-first, 40 bits, seis bits de endereço, read em dois frames e mapa do guia; detalhe de retorno P14 |
+| P04 | R: clk 2 GHz, SCLK ≤25 MHz, mem_clk ≤200 MHz, divisores /1,/2,/4,/8; metas físicas continuam P27 |
+| P06 | R: rst_n baixo, RAM não reseta, AES aguardando lock/inicialização; detalhes P20/P21 |
+| P07/P08/P10 | D18/D19: rodada iterativa proposta, unidade combinacional implementada; expansão/cache e custo físico ainda a validar |
+| P09 | R: serial em SCLK, banco em clk always-on, evento/toggle de frame; outras travessias D14/D15 e P22/P23 |
+| P11/P12 | Sem dados novos de tecnologia, potência ou ferramentas oficiais; P27 |
+
+Não preservar como oficiais o mapa antigo, máscaras, comandos CLR ou exigência
+de quatro clocks SCLK com CS alto. A inicialização do banco always-on independe
+de SCLK; a disciplina do serializador continua pendente.
+
+## Perguntas atuais ao instrutor/DV
+
+Todos os itens abaixo são **P / OPEN**, sem resposta atribuída ao instrutor.
+As propostas D não fecham estes itens por conta própria.
+
+| ID | Pergunta verificável | Impacto / proposta atual |
+|---|---|---|
+| P14 | Em qual borda/posição do segundo frame começam os 32 bits MISO? Qual RWb/dummy/NOP deve ser enviado e qual intervalo mínimo entre CS é aceito? O que ocorre com read pendente/novo request? | Bloqueia SPI bit a bit; não inferir resposta imediata |
+| P15 | O segmento CFB exigido é 128 bits? Se menor, como se divide o bloco e atualiza o registrador de feedback? | H: CFB-128 apenas como possibilidade |
+| P16 | CTR usa o valor inicial antes do primeiro incremento? Incrementa módulo 2^64 ou sinaliza overflow? Como o IP de referência trata carry HI/LO? | Preservar R: IV xor zero_extend_128(counter64), nunca concatenação |
+| P17 | Qual comportamento de DECRYPT é esperado em CFB/OFB/CTR e qual ciphertext alimenta o feedback CFB no decrypt? | Proposta: primitiva encrypt nos dois sentidos; validar compatibilidade |
+| P18 | Quantas bordas decorrem entre endereço e dado de leitura da RAM? Qual read-during-write e o que mem_o_data faz enquanto AES possui a RAM? | Bloqueia cronograma de busca/escrita e scoreboard |
+| P19 | Como o ambiente sinaliza/garante ausência de acesso externo, já que wr_en=0 é read? Qual mecanismo de mux de clock e protocolo de handoff são aprovados? | Ownership em idle é R; mecanismo e observabilidade OPEN |
+| P20 | Qual faixa/semente reproduzível do lock pseudoaleatório, quantos ciclos de sys_clk liberam reset, e como tratar disable/divisor/relock durante operação? | PLL mock e reset sequencing futuros; sem gating inseguro |
+| P21 | Quais requisitos de assert/deassert e primeiro frame com SCLK inicialmente parado? Há clocks de preparação ou reset de framing aprovado? | Banco não depende de SCLK; serializador ainda precisa recuperação correta |
+| P22 | Qual intervalo mínimo entre frames completos e CS? O toggle usa ack/slot e qual garantia impede sobrescrita ou duas alternâncias antes da captura? | D14 propõe retenção/ack, sem novos pinos oficiais |
+| P23 | BLOCKS_DONE deve atualizar durante BUSY em cada bloco? Qual atraso/snapshot coerente de status é aceito e como garantir publicação antes de parar sys_clk? | D15 propõe snapshot reconhecido; sem sincronizar bits individualmente |
+| P24 | Quais resets de KEY/IV/COUNTER/NUM_BLOCKS/controles/status, valor VERSION, readback START, política de ERROR e reação a RSV/endereço/RO inválidos? | Não inventar constantes ou comandos CLR |
+| P25 | START ocupado, configuração escrita durante BUSY, START sem lock/ownership e escrita de owner/divisor simultânea à conclusão: rejeitar, ignorar ou erro? Qual prioridade? | Captura no START é R; política concorrente e handshake são OPEN |
+| P26 | Reset no meio das quatro escritas de um bloco deixa resultado parcial? Qual estado de flags/contagem e procedimento de retomada o ambiente exige? | RAM não reseta; não prometer rollback |
+| P27 | Qual IP AES de referência será disponibilizado, tecnologia/PDK, ferramentas/versões, restrições de síntese/CDC/UPF e metas de timing/área/energia/MTBF? Como se registra o aceite humano? | Nenhuma métrica física ou aprovação presumida |
+
+Apresentação ao parceiro, respostas oficiais e defesa/aprovação do instrutor
+continuam pendentes no [checklist da retomada](../reports/semana_02_retomada.md).
+SPI/clock/ownership não impedem os testes puros do datapath da Semana 3.
+
+## Histórico preservado — Semana 1 e proposta v1.0
+
 Atualização: 09/10/2026. A seção inicial preserva o diagnóstico da Semana 1. A tabela de evolução ao final distingue propostas da Semana 2 de requisitos aprovados; não considerar as hipóteses como respostas do instrutor.
 
 ## Confirmado na Semana 1

@@ -1,5 +1,92 @@
 # Registro de decisões — Semana 2
 
+## Revisão vigente de 29/10/2026 — supersessão pela v1.1
+
+Referência atual: [arquitetura v1.1](arquitetura_v1.1.md), baseada no Block
+Guide v1.0.0. **Aceite humano pendente.** As seções D01–D12 originais abaixo
+permanecem como histórico; sua linguagem provisória reflete 09/10/2026.
+
+| ADR histórico | Situação na v1.1 |
+|---|---|
+| D01 iterativa | Mantida como proposta D18, sem cronograma antigo ou timing comprovado |
+| D02 encrypt-only | Substituída por R: AES-128 cipher/inverse e seis modos |
+| D03 palavras/endereços | Palavras e byte order preservados; endereços em bytes substituídos por índices SPI |
+| D04 chave adiantada | Substituída pela avaliação de pré-expansão e ordem inversa em D18 |
+| D05 16+4 S-boxes | Contagem não mantida como contrato; tabelas forward/inverse no datapath atual, síntese física pendente |
+| D06 banco em SCLK | Substituída por banco em clk always-on e quatro clocks |
+| D07 reset | Polaridade baixa confirmada; RAM sem reset, bootstrap/relock revisados em D13 |
+| D08 quatro fases SPI→AES | Não é a fronteira oficial SPI→controle; substituída por evento/toggle D14 e snapshot D15 |
+| D09 status/clears | Semântica do guia prevalece; CLR_DONE/CLR_ERROR removidos do contrato oficial |
+| D10 mapa próprio | Inteiramente substituído pelo mapa do guia |
+| D11 frame 48 bits | Substituído por Mode 0, 40 bits e read em duas transações |
+| D12 máscaras | Removida do contrato oficial; captura de configuração no START e regras concorrentes em P25 |
+
+### D13 — reset por domínio e bootstrap
+
+Contexto: controle always-on deve habilitar PLL com sys_clk parado; RAM persiste.
+Alternativas: reset direto, liberação local sincronizada, resets independentes.
+Escolha proposta: assert assíncrono e deassert sincronizado, mantendo AES em
+reset até clock/lock disponíveis. Evita usar SCLK para inicializar o banco.
+Impacto: reset comum/coordenado dos protocolos e sequência de relock devem ser
+verificados; não há reset da RAM. Status: D, P20/P21 OPEN; não implementado.
+
+### D14 — retenção de frame e evento/toggle
+
+Contexto: evento de frame completo precisa cruzar SCLK→clk sem perda de pulso.
+Requisito: transporte de evento/toggle. Escolha proposta: frame retido,
+sincronização do toggle, guarda, captura atômica e confirmação de consumo.
+Alternativa para capacidade futura: fila/mais slots se a temporização exigir.
+Trade-off: ack e slot demandam prova de rearmamento/back-to-back. Status: D,
+P14/P22 OPEN; não implementado, sem afirmação de CDC fisicamente resolvido.
+
+### D15 — snapshot de operação e status
+
+Contexto: clk e sys_clk têm disponibilidade distinta; configuração não pode
+mudar durante a captura, e BLOCKS_DONE é multibit. Escolha proposta: snapshot
+retido com pedido/ack persistentes; conclusão e progresso por publicação
+coerente. Alternativa: mailbox/FIFO conforme demanda. Custo: registradores e
+latência; evita sincronização individual de bits. Status: D, P23/P25 OPEN;
+controle/status RTL ainda não implementados.
+
+### D16 — ownership da porta de RAM
+
+Contexto: recurso single-port com clock alternando entre mem_clk e sys_clk.
+Escolha proposta: handoff em repouso, bloqueio de novos acessos e seleção de
+clock por mecanismo aprovado. Rejeitar mux combinacional ingênuo de clocks.
+Alternativa física depende da tecnologia. Trade-off: interface externa não
+expõe idle e leitura também usa wr_en=0; o acordo de integração é indispensável.
+Status: D, P18/P19 OPEN; não implementado.
+
+### D17 — interpretação das equações dos modos
+
+Contexto: guia exige seis modos e descreve CTR por XOR. Escolha proposta:
+equações na seção 7 da v1.1, com guarda do ciphertext original antes de
+sobrescrita in-place. CFB-128 permanece H, não requisito. Alternativas e
+feedback devem ser comparados ao IP de referência. Status: D/H, P15–P17 OPEN;
+somente CTR XOR e modos/códigos são requisitos confirmados, sem modos RTL nesta entrega.
+
+### D18 — rodada iterativa e acesso às chaves
+
+Contexto: inverse precisa K10..K0; expansão adiantada forward não basta.
+Escolha proposta: reusar rodada de 128 bits e pré-expandir onze chaves.
+Alternativas: schedule reversível/on-the-fly, serialização ou pipeline.
+Trade-off: 1408 bits lógicos de chaves versus custo/controle de geração;
+nenhuma superioridade física medida. Status: D para Semana 4, sem expansão
+ou FSM implementadas; comparar com ferramenta/tecnologia de P27.
+
+### D19 — datapath combinacional reutilizável
+
+Contexto: Semana 3 testa transformações independentemente de SPI/RAM/clocks.
+Escolha: funções puras em package e módulo de rodada combinacional com
+state/key (128), decrypt/initial/final (1), state_o (128). Inicial tem
+prioridade; inverse usa INVCIPHER com chaves normais em ordem reversa.
+Alternativa: registrar State dentro do datapath, acoplando teste ao controlador.
+Trade-off: o futuro controlador precisa fornecer enables/registros; combinacional
+não implica atendimento da frequência do PLL. Status: implementada e testada;
+evidências em [semana_03.md](../reports/semana_03.md), aceite humano pendente.
+
+## Registro histórico de 09/10/2026
+
 Data: 09/10/2026. Referência de contrato: [arquitetura v1.0](arquitetura_v1.0.md). Todos os ADRs são **decisões arquiteturais provisórias para defesa**, sem aprovação atribuída ao instrutor. P01–P13 referem-se às [pendências originais](../spec/pendencias.md). AES-128 e somente cifragem são hipóteses funcionais; SPI modo 0 é baseline provisório; reset ativo baixo e expansão adiantada são decisões provisórias; 16 + 4 S-boxes são hipótese arquitetural a validar por síntese. Nenhuma dessas seis escolhas é requisito oficial confirmado.
 
 ## D01 — Iterativa versus desenrolada

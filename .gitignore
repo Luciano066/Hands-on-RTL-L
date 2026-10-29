@@ -3,3 +3,6 @@
 /obj_dir/
 *.vcd
 *.fst
+# Fontes de trabalho confidenciais recebidas fora do repositorio.
+DV_BlockGuide_MiniSoCAES_*.pdf
+Revisao_Semana_02_MiniSoC_AES_Block_Guide_*.md
