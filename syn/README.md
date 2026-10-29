@@ -1,5 +1,11 @@
 # Síntese futura
 
+Semana 4, 29/10/2026: `make synth-aes` também verifica Key Expansion e core
+sequencial, com scripts `scripts/synth_aes_key.ys` e `scripts/synth_aes_core.ys`.
+Os três checks passaram sem problemas. O core contém FFs, sem latches na
+estatística final; não houve mapeamento físico ou análise de timing/potência.
+Veja [evidências da Semana 4](../docs/reports/semana_04.md).
+
 Atualização de 29/10/2026: foi executada síntese **genérica** do datapath AES
 com Yosys/slang (`make synth-aes-dp`), com zero problemas no check e sem
 FF/latches na estatística final. O [script](../scripts/synth_aes_dp.ys) não

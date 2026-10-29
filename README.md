@@ -1,10 +1,12 @@
-# MiniSoC AES — arquitetura revisada e datapath
+# MiniSoC AES — arquitetura, datapath e núcleo sequencial
 
 A Semana 1 validou o ambiente com uma XOR. A Semana 2 recebeu uma
 [arquitetura v1.1](docs/architecture/arquitetura_v1.1.md) revisada após leitura
 do Block Guide v1.0.0; **segue sem apresentação/aceite registrados**.
 A Semana 3 implementa transformações e rodada combinacional AES-128
-forward/inverse, com testes autochecking. O SoC integrado ainda não existe.
+forward/inverse, com testes autochecking. A Semana 4 acrescenta expansão de
+chave e núcleo sequencial de bloco único, testados em ambos os sentidos.
+O SoC integrado ainda não existe; aceite do instrutor permanece pendente.
 
 ## Documentação vigente
 
@@ -13,17 +15,42 @@ forward/inverse, com testes autochecking. O SoC integrado ainda não existe.
 - [ADRs e supersessão das decisões antigas](docs/architecture/decisoes_semana_02.md).
 - [Pendências e perguntas OPEN](docs/spec/pendencias.md).
 - [Semana 3: implementação e testes reais](docs/reports/semana_03.md).
+- [Semana 4: expansão, controle e evidências](docs/reports/semana_04.md).
+- [Contrato interno do núcleo sequencial](docs/architecture/aes_core_semana_04.md).
 - [Backlog](BACKLOG.md).
 
 O contrato revisado prevê AES-128 cipher/inverse, seis modos, 1..256 blocos
 em RAM 1024 x 32 in-place; SPI Mode 0 com frames de 40 bits configura/monitora
-o sistema. MEMORY DATA transfere os blocos. PLL, memória, SPI, Key Expansion
-e controlador AES permanecem para implementação posterior.
+o sistema. MEMORY DATA transfere os blocos. PLL, memória, SPI, modos e
+engine integrado `minisoc_aes_top` permanecem para implementação posterior.
+`minisoc_aes_core` é o auxiliar sequencial de um bloco, com a interface da
+Semana 4; não altera as portas oficiais do MiniSoC.
 
 A [arquitetura v1.0](docs/architecture/arquitetura_v1.0.md) e os materiais de
 defesa de 09/10 são históricos superados. Seu mapa, frame de 48 bits, máscaras,
 domínio do banco e cronograma não são contratos vigentes. O PDF confidencial
 e a revisão técnica recebidos não integram o repositório.
+
+## Testar a Semana 4 e a regressão completa
+
+Com o toolchain ativado, `make -j4 regression` executa XOR, datapath,
+Key Expansion e core. Foram observadas **8.008 verificações AES PASS**,
+além dos quatro casos XOR, sem warnings. Key Expansion: 535 checks e
+22 chaves oficiais; core: 5.128 checks, 52 operações e 42 cortes por reset.
+Latências locais medidas: expansão 10 ciclos; core 21 ciclos, nos dois sentidos.
+O núcleo expande novamente a chave a cada operação e retém a saída até
+outra conclusão/reset. DONE é um pulso local; START durante BUSY é ignorado.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_aes_tests.ps1 -Clean -Synthesis
+```
+
+Sem `-Synthesis`, Yosys não é necessário. Alvos individuais:
+`make test-aes-key`, `make test-aes-core`; síntese genérica: `make synth-aes`.
+`bash scripts/run_aes_tests.sh` executa a regressão e localiza a raiz.
+A síntese genérica dos três blocos passou com zero problemas; não valida
+timing dos clocks do PLL. Consulte o relatório da Semana 4 para comandos,
+versões e limites. As políticas SPI/CDC/RAM ainda OPEN não foram aprovadas.
 
 ## Testar o datapath AES
 
@@ -132,6 +159,7 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 |   |-- architecture/README.md
 |   |-- architecture/arquitetura_v1.0.md
 |   |-- architecture/arquitetura_v1.1.md
+|   |-- architecture/aes_core_semana_04.md
 |   |-- architecture/decisoes_semana_02.md
 |   |-- reports/
 |       |-- semana_01.md
@@ -144,8 +172,11 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 |       |-- semana_02_verificador.md
 |       |-- semana_02_retomada.md
 |       |-- semana_03.md
+|       |-- semana_04.md
 |-- rtl/minisoc_aes/{aes_transforms_pkg.sv,minisoc_aes_dp.sv}
+|-- rtl/minisoc_aes/{minisoc_aes_key_exp.sv,minisoc_aes_core.sv}
 |-- tb/minisoc_aes_dp_tb.sv
+|-- tb/{minisoc_aes_key_exp_tb.sv,minisoc_aes_core_tb.sv}
 |-- tb/vectors/README.md
 |-- rtl/smoke_top.sv
 |-- tb/tb_smoke_top.sv
@@ -158,6 +189,8 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 |   |-- run_aes_dp.sh
 |   |-- run_aes_dp.ps1
 |   |-- synth_aes_dp.ys
+|   |-- run_aes_tests.ps1 / run_aes_tests.sh
+|   |-- synth_aes_key.ys / synth_aes_core.ys
 |   |-- activate_tools.ps1
 |   |-- bootstrap_windows.ps1
 |-- .gitattributes
@@ -179,8 +212,13 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 | `make compile-aes-dp` | Lint e compilação Icarus, sem executar a simulação |
 | `make sim-aes-dp` | Compila e executa o testbench AES |
 | `make synth-aes-dp` | Síntese genérica opcional e check no Yosys com frontend slang |
+| `make test-aes-key` / `make test-aes-core` | Lint, compilação e TBs independentes dos módulos sequenciais |
+| `make lint-aes-key` / `make lint-aes-core` | Lint Verilator dos novos módulos e suas dependências |
+| `make test-aes` | Três suites AES: datapath, chaves e core |
+| `make regression` | Smoke XOR e todas as suites AES, seguro para make -j4 |
+| `make synth-aes` | Síntese genérica dp/key/core; alvos individuais synth-aes-key e synth-aes-core |
 | `make versions` | Mostra versões reais das ferramentas |
-| `make clean` | Remove build/smoke.vvp e build/aes_dp.vvp; preserva fontes, ferramentas e logs |
+| `make clean` | Remove somente os quatro binários .vvp conhecidos; preserva fontes, ferramentas e logs |
 
 As variáveis `VERILATOR`, `IVERILOG`, `VVP` e `YOSYS` permitem escolher executáveis no PATH. Para ferramentas em caminhos com espaços, prefira ativar o diretório no PATH e usar o nome do executável.
 

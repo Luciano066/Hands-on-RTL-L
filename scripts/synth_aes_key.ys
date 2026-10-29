@@ -1,0 +1,5 @@
+# Generic synthesis only; no physical technology or timing constraints.
+read_slang --top minisoc_aes_key_exp rtl/minisoc_aes/aes_transforms_pkg.sv rtl/minisoc_aes/minisoc_aes_key_exp.sv
+synth -top minisoc_aes_key_exp -noabc
+check -assert
+stat

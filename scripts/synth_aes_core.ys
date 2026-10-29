@@ -1,0 +1,5 @@
+# Internal single-block primitive, not the future memory/mode AES engine.
+read_slang --top minisoc_aes_core rtl/minisoc_aes/aes_transforms_pkg.sv rtl/minisoc_aes/minisoc_aes_dp.sv rtl/minisoc_aes/minisoc_aes_key_exp.sv rtl/minisoc_aes/minisoc_aes_core.sv
+synth -top minisoc_aes_core -noabc
+check -assert
+stat

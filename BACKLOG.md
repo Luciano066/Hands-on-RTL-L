@@ -51,13 +51,23 @@ requisitos no guia não encerra a Semana 2.
 - [x] Registrar versões, comandos, resultados e limites em semana_03.md.
 - [ ] Apresentar resultados e obter aceite do instrutor.
 
-## Semana 4 — expansão e controle AES
+## Semana 4 — expansão e controle AES implementados/testados, aceite pendente
 
-- [ ] Implementar minisoc_aes_key_exp.sv e comparar K0..K10 com FIPS A.1.
-- [ ] Definir armazenamento/cache e acesso reverso às chaves sem alterar a ordem INVCIPHER.
-- [ ] Implementar registradores e controlador sequencial do AES; testar reset, enables e última rodada.
-- [ ] Validar KATs cipher/inverse e estabilidade/handshake da interface interna.
+- [x] Auditar branch be42888 limpa, registrar hashes de 36 arquivos e reexecutar regressão anterior.
+- [x] Centralizar receitas/diretório do Makefile, preservando os alvos antigos.
+- [x] Implementar minisoc_aes_key_exp.sv e comparar K0..K10 com FIPS A.1 e C.1.
+- [x] Armazenar onze chaves e disponibilizar índices em ordem direta/inversa; sem cache entre operações.
+- [x] Implementar minisoc_aes_core auxiliar com State, direção, contador e FSM, reutilizando o datapath intacto.
+- [x] Validar KATs cipher/inverse, captura, BUSY, pulso DONE, retenção da saída e operações consecutivas.
+- [x] Testar reset/abort nos dez passos de expansão e 42 cortes do core em ambos os sentidos.
+- [x] Executar lint/simulação/regressão e síntese genérica, registrando latências de 10/21 ciclos.
+- [x] Documentar contrato interno D20 e resultados em docs/reports/semana_04.md.
 - [ ] Planejar controlador de modos, guarda de ciphertext original e RAM in-place.
+- [ ] Apresentar resultados e registrar aceite do instrutor; manter P14–P27 OPEN.
+
+`minisoc_aes_top` permanece reservado ao futuro engine; o core atual é de um
+bloco. DONE pulsado e START ocupado ignorado são escolhas locais, sem fechar
+políticas oficiais de status/concorrência do MiniSoC.
 
 ## Semana 5 — SPI, controle e CDC
 

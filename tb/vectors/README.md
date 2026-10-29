@@ -26,3 +26,22 @@ polinomial com redução por `0x11b`, sem consultar funções/tabelas do DUT.
 Byte `i` ocupa `[127-8*i -: 8]`; `s[row,col]=byte[row+4*col]`.
 As quatro palavras de memória correspondem, em ordem, a `[127:96]`,
 `[95:64]`, `[63:32]`, `[31:0]`.
+
+## Semana 4 — expansão e core sequencial
+
+Fixtures `aes128_round_keys_a.mem` e `aes128_round_keys_b.mem`: onze linhas
+de 128 bits por arquivo, em ordem K0..K10, copiadas de valores oficiais
+independentes do RTL. O TB lê ambos os arquivos e confere índices ascendentes
+e descendentes; não calcula a recorrência de expansão para formar o oráculo.
+
+- A: chave `2b7e151628aed2a6abf7158809cf4f3c`, FIPS 197 apêndice A.1.
+- B: chave `000102030405060708090a0b0c0d0e0f`, FIPS 197 **edição original de 2001**, apêndice C.1 (`k_sch` de cipher; não usar chaves transformadas de EQINVCIPHER).
+- Fonte oficial para ambos: [FIPS 197 original no NIST](https://csrc.nist.gov/files/pubs/fips/197/final/docs/fips-197.pdf). A referência C.1 pertence à edição original, não ao PDF atualizado de 2023.
+
+O TB do core contém os mesmos quatro pares públicos NIST AES_Core128,
+agora executados pelo controlador RTL/Key Expansion, e o quinto par C.1:
+plaintext `00112233445566778899aabbccddeeff`, ciphertext
+`69c4e0d86a7b0430d8cdb78070b4c55a`, com a chave B. Cada par é testado
+em encrypt/decrypt. Casos de recuperação após reset repetem o par B;
+52 operações concluídas não significam 52 vetores criptográficos distintos.
+Nenhum dos dois novos TBs importa funções do DUT para calcular resultados esperados.
