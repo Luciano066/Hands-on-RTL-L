@@ -44,19 +44,29 @@ pública estão documentadas em [tb/vectors](tb/vectors/README.md).
 
 ## Cronograma de 13 semanas e revisão com DV
 
-O [BACKLOG](BACKLOG.md#cronograma-de-13-semanas) passa a organizar o trabalho
-em **13 semanas**, preservando separadamente as evidências das etapas antigas.
-Os marcos informados são **04/12/2026** e **08/01/2027**. A data inicial,
-eventuais recessos e o conteúdo oficial de cada marco ainda precisam de
-confirmação; a distribuição das atividades no backlog é uma proposta de
-trabalho, sem datas semanais presumidas.
+Conforme o comunicado do professor confirmado pelo solicitante, o cronograma
+tem **13 semanas**, entregas semanais às **sextas-feiras** e encerramento em
+**29/01/2027**. O recesso vai de **21/12/2026 a 03/01/2027**.
+**Data inicial: a confirmar**; ela não foi explicitada no comunicado.
 
-O contato com o verificador deve cobrir agora as portas dos três módulos,
-ordem dos bytes e os vetores oficiais; antes de cada marco, revisar evidências
-e divergências. **Nome, canal, datas e retornos ainda não estão registrados**.
-A pauta e o quadro de contatos estão no
+| Data | Entrega / atividade confirmada |
+|---|---|
+| 30/10/2026 | Desafio SubBytes e ShiftRows: módulos combinacionais, TB autochecking e relatório da Semana 2 |
+| 06/11/2026 | Microarquitetura e demais transformações de rodada; contato com o verificador programado |
+| 04/12/2026 | RTL v1.0 com ECB, CBC e CTR; contato com o verificador programado |
+| 08/01/2027 | RTL v1.1 acrescentando PCBC, CFB e OFB; contato com o verificador programado |
+| 22/01/2027 | Contato com o verificador programado |
+| 29/01/2027 | Encerramento |
+
+As datas das demais entregas e os critérios detalhados de aceite permanecem
+a confirmar no [BACKLOG](BACKLOG.md#cronograma-de-13-semanas). A numeração das
+entregas históricas não estabelece a data inicial do novo cronograma.
+
+Os quatro contatos estão **programados**, sem contato realizado documentado
+ou aceite do parceiro obtido. Nome do parceiro, data de contato realizado,
+canal utilizado e retorno: **não informado/sem registro**. As pautas propostas
+e o quadro de acompanhamento estão no
 [relatório de 30/10](docs/reports/semana_02.md#6-dúvidas-e-contato-com-o-verificador).
-Não há contato ou aceite atribuído ao parceiro nesta correção.
 
 ## Documentação vigente
 

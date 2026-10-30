@@ -68,7 +68,7 @@ core em 21 ciclos, cipher/inverse, reset/abort e pulso DONE.
 | `Makefile` | Alvos lint/compile/sim/test de transforms; inclusão em test-aes/regression e clean |
 | `docs/reports/semana_02.md` | Este relatório de 30/10 |
 | `docs/reports/semana_02_historico_2026-10-09.md` | Cópia integral do relatório anterior |
-| `README.md` / `BACKLOG.md` | Interfaces, comando único, resultados, proposta de 13 semanas, marcos e contatos pendentes |
+| `README.md` / `BACKLOG.md` | Interfaces, comando único, resultados, cronograma confirmado de 13 semanas, marcos e contatos programados |
 
 Os scripts existentes `run_aes_tests.ps1` e `run_aes_tests.sh` não precisaram
 de alteração: chamam `regression`, que agora inclui o desafio. Nenhuma função
@@ -167,7 +167,7 @@ Os relatórios informativos do Verilator e as mensagens `$finish` não são
 warnings. Verilator foi usado para lint; a execução do TB foi feita por vvp.
 
 A conferência documental passou em cinco arquivos Markdown UTF-8, com 37
-links relativos válidos, 13 semanas no plano, os dois marcos e cópia histórica
+links relativos válidos, duração de 13 semanas, marcos e cópia histórica
 idêntica à base. `git diff --check` não apontou erros de whitespace.
 
 ## 6. Dúvidas e contato com o verificador
@@ -179,7 +179,7 @@ sem atribuir respostas ao professor nem reproduzir o documento confidencial:
 | Seção | Pergunta a confirmar |
 |---|---|
 | 1 | Como o desafio de 30/10 é avaliado separadamente do MiniSoC completo e do aceite arquitetural ainda pendente? |
-| 2 | Qual é a data inicial das 13 semanas, quais recessos se aplicam e quais entregáveis/critérios correspondem a 04/12/2026 e 08/01/2027? |
+| 2 | Qual é a data inicial das 13 semanas e quais são os critérios detalhados de aceite das entregas? Recesso e escopos de RTL v1.0/v1.1 já foram confirmados no comunicado informado pelo solicitante. |
 | 3 | Além dos nomes de módulos exigidos, há nomes de portas obrigatórios? As interfaces `byte_i/byte_o` e `state_i/state_o` propostas são aceitas pelo ambiente do parceiro? |
 | 8 | O encapsulamento combinacional das funções do package atende à forma de entrega? Confirmar convenção por colunas/byte 0 no MSB, fronteiras dos estados das rodadas e tratamento esperado de X/Z no ambiente de DV. |
 
@@ -187,23 +187,47 @@ As pendências de integração [P14–P27](../spec/pendencias.md) continuam aber
 incluindo SPI, reset/CDC, RAM, modos, ferramentas e critérios físicos. Elas
 não bloqueiam a verificação puramente combinacional desta entrega.
 
-| Contato previsto | Pauta | Registro efetivo em 30/10 |
-|---|---|---|
-| Após preparar o desafio de 30/10 | Interfaces dos três módulos, ordem dos bytes, tabela S-box, FIPS B e comando único | Parceiro/nome/canal/data/retorno não informados; revisão pendente |
-| Antes do marco de 04/12/2026 | Escopo do marco, contratos de integração e divergências de DV | Planejado; não realizado nesta correção |
-| Antes do marco de 08/01/2027 | Regressão, evidências, correções e condições de aceite | Planejado; não realizado nesta correção |
+Datas de contato programadas conforme o comunicado confirmado pelo
+solicitante; as pautas abaixo são propostas para alinhamento:
 
-Após cada contato, registrar nome, data/canal, revisão/commit apresentado,
-retorno, responsáveis e pendências. Não há mensagem enviada nem concordância
-presumida. O [pacote antigo do verificador](semana_02_verificador.md) permanece
-histórico; o material atual para esta pauta é este relatório e o TB novo.
+| Contato programado | Pauta proposta | Registro efetivo em 30/10 |
+|---|---|---|
+| 06/11/2026 | Microarquitetura, transformações, interfaces, State, tabela S-box, FIPS B e comando único | Programado; sem registro de realização |
+| 04/12/2026 | RTL v1.0: ECB, CBC e CTR; integração e divergências de DV | Programado; sem registro de realização |
+| 08/01/2027 | RTL v1.1: acréscimo de PCBC, CFB e OFB; regressão e condições de aceite | Programado; sem registro de realização |
+| 22/01/2027 | Alinhar pauta e revisar evidências/pendências para o encerramento | Programado; sem registro de realização |
+
+Até o momento não há contato efetivamente realizado documentado. Nome do
+parceiro, data de contato realizado, canal utilizado e retorno:
+**não informado/sem registro**. Após cada contato, registrar esses campos,
+revisão/commit apresentado, responsáveis e pendências. Não há mensagem enviada,
+reunião registrada como realizada ou aceite do verificador obtido. O
+[pacote antigo do verificador](semana_02_verificador.md) permanece histórico;
+o material atual para esta pauta é este relatório e o TB novo.
 
 ## 7. Planejamento, limites e versionamento
 
-README e [BACKLOG](../../BACKLOG.md#cronograma-de-13-semanas) agora distinguem
-o plano de **13 semanas** das entregas históricas. Os marcos de **04/12/2026**
-e **08/01/2027** estão registrados; calendário semanal e conteúdo oficial
-dos marcos seguem a confirmar. A distribuição de atividades é uma proposta.
+README e [BACKLOG](../../BACKLOG.md#cronograma-de-13-semanas) registram os dados
+do comunicado do professor confirmados pelo solicitante nesta revisão:
+
+| Item / data | Informação confirmada |
+|---|---|
+| Duração | 13 semanas, com entregas semanais às sextas-feiras |
+| Data inicial | A confirmar; não explicitada no comunicado disponível |
+| 30/10/2026 | Desafio SubBytes e ShiftRows: módulos combinacionais, TB autochecking e relatório da Semana 2 |
+| 06/11/2026 | Microarquitetura e demais transformações de rodada |
+| 04/12/2026 | RTL v1.0 contemplando ECB, CBC e CTR |
+| 21/12/2026 a 03/01/2027 | Recesso |
+| 08/01/2027 | RTL v1.1 acrescentando PCBC, CFB e OFB |
+| 29/01/2027 | Encerramento |
+
+As datas das demais entregas e os critérios detalhados de aceite permanecem
+a confirmar. Não foi presumida uma data inicial por contagem retroativa.
+A distribuição proposta na primeira revisão de 30/10 permanece no commit
+`a81d782`; o relatório histórico de 09/10 continua intacto. A numeração das
+entregas antigas não fixa o início do novo cronograma. Esta atualização de
+calendário altera somente README, BACKLOG e este relatório, preservando o
+RTL, os TBs e os resultados da seção 5.
 
 Esta correção não implementa SPI, RAM, PLL, modos de operação, integração,
 UPF ou otimizações. Não houve nova síntese, STA, análise física de CDC ou

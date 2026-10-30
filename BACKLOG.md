@@ -6,35 +6,32 @@ Contrato atual: [arquitetura v1.1](docs/architecture/arquitetura_v1.1.md).
 
 ## Cronograma de 13 semanas
 
-Replanejamento solicitado em 30/10/2026. Os marcos informados são
-**04/12/2026** e **08/01/2027**. A data inicial, recessos, correspondência entre
-semanas e datas e conteúdo oficial dos marcos não vieram no enunciado desta
-correção e seguem a confirmar com o professor. A tabela é uma **proposta de
-distribuição em 13 semanas**, sem transformar hipóteses em calendário oficial.
+Informações do comunicado do professor confirmadas pelo solicitante em
+30/10/2026. Este calendário substitui a distribuição de atividades proposta
+na primeira revisão de 30/10, preservada no commit `a81d782`.
 Os títulos Semana 1–6 no histórico abaixo identificam entregas anteriores.
 
-| Semana | Trabalho previsto | Situação técnica em 30/10 |
-|---|---|---|
-| 1 | Estudo AES/SPI, ambiente e requisitos | Ambiente e estudo registrados |
-| 2 | Arquitetura e desafio S-box/SubBytes/ShiftRows de 30/10 | Três módulos e 647 checks PASS; aceite pendente |
-| 3 | Rodada completa e transformações inversas | Datapath já implementado; 2.345 checks PASS |
-| 4 | Expansão de chave e core sequencial | Já implementados; 535 + 5.128 checks PASS |
-| 5 | SPI e banco de configuração | Futuro; resolver pendências com professor/DV |
-| 6 | CDC, ownership e RAM | Futuro; contratos e verificações pendentes |
-| 7 | PLL mock, reset e integração básica | Futuro |
-| 8 | Controlador dos modos e blocos em RAM | Futuro |
-| 9 | Verificação ponta a ponta com o parceiro | Futuro |
-| 10 | Síntese, restrições e análise de timing | Futuro; tecnologia/ferramentas a confirmar |
-| 11 | Avaliação de baixo consumo e UPF, se exigido | Futuro; requisitos a confirmar |
-| 12 | Correções, regressão e revisão de evidências com DV | Futuro |
-| 13 | Documentação final, demonstração e defesa | Futuro; aceite humano pendente |
-
-| Marco | Preparação / confirmação necessária |
+| Item | Informação confirmada |
 |---|---|
-| 04/12/2026 | Pactuar escopo e critérios com professor/DV; revisar implementação, testes e pendências antes da data |
-| 08/01/2027 | Pactuar escopo e critérios com professor/DV; revisar regressão, documentação e condições de aceite antes da data |
+| Duração | 13 semanas |
+| Data inicial | A confirmar; não explicitada no comunicado disponível |
+| Entregas semanais | Sextas-feiras |
+| Recesso | 21/12/2026 a 03/01/2027 |
+| Encerramento | 29/01/2027 |
 
-O replanejamento não autoriza antecipar funcionalidades nesta correção.
+| Data | Entrega / atividade | Situação em 30/10 |
+|---|---|---|
+| 30/10/2026 | Desafio SubBytes e ShiftRows, com módulos combinacionais, TB autochecking e relatório da Semana 2 | Implementação e 647 checks PASS; aceite pendente |
+| 06/11/2026 | Microarquitetura e demais transformações de rodada; contato com DV | Datapath existente com 2.345 checks PASS; revisão da entrega e contato pendentes |
+| 04/12/2026 | RTL v1.0 contemplando ECB, CBC e CTR; contato com DV | Entrega e contato futuros; modos não implementados |
+| 08/01/2027 | RTL v1.1 acrescentando PCBC, CFB e OFB; contato com DV | Entrega e contato futuros; modos não implementados |
+| 22/01/2027 | Contato com DV | Programado; pauta a combinar |
+| 29/01/2027 | Encerramento | Futuro; aceite humano pendente |
+
+A data inicial e as datas das demais entregas permanecem a confirmar, sem
+preenchimento por contagem retroativa das semanas. Critérios detalhados de
+aceite ainda precisam ser alinhados. O replanejamento não autoriza antecipar
+funcionalidades nesta correção.
 
 ## Desafio obrigatório de 30/10/2026
 
@@ -48,21 +45,28 @@ O replanejamento não autoriza antecipar funcionalidades nesta correção.
 - [x] Confirmar que quatro falhas deliberadas são detectadas pelo TB em cópias locais ignoradas.
 - [x] Preservar relatório anterior em `docs/reports/semana_02_historico_2026-10-09.md`.
 - [x] Atualizar relatório, README, vetores e planejamento, sem incluir o Block Guide.
-- [ ] Confirmar calendário detalhado das 13 semanas e critérios dos dois marcos.
+- [x] Registrar duração, entregas às sextas, encerramento, recesso, marcos e contatos programados confirmados pelo comunicado.
+- [ ] Confirmar data inicial, datas das demais entregas e critérios detalhados de aceite.
 - [ ] Revisar dúvidas das seções 1–3 e 8 com o professor e o parceiro.
 - [ ] Apresentar o desafio e registrar aceite real do professor.
 
 ## Contatos com o verificador parceiro
 
-Nenhum contato efetivo está comprovado nos registros recebidos. Nome/canal,
-datas, revisão apresentada, retorno e responsáveis devem ser preenchidos
-após cada contato no [relatório atualizado](docs/reports/semana_02.md#6-dúvidas-e-contato-com-o-verificador).
+Nenhum contato efetivamente realizado está documentado nos registros
+disponíveis. Nome do parceiro, data de contato realizado, canal utilizado e
+retorno: **não informado/sem registro**. Não há aceite do verificador obtido.
+Após cada contato, registrar também revisão/commit apresentado e pendências no
+[relatório atualizado](docs/reports/semana_02.md#6-dúvidas-e-contato-com-o-verificador).
 
-- [ ] Após preparar a entrega de 30/10, combinar revisão de portas, State, vetores e dúvidas do guia; registrar nome/data/canal/retorno.
-- [ ] Antes de 04/12, revisar escopo do marco, interfaces de integração e divergências de DV; registrar revisão/commit.
-- [ ] Antes de 08/01, revisar regressão e pendências de aceite; registrar devolutivas e resolução.
+As datas abaixo estão confirmadas como programadas; as pautas são propostas:
 
-As ações acima são planejadas; esta correção não envia mensagens ao parceiro.
+- [ ] 06/11/2026 — revisar microarquitetura, transformações, portas, State, vetores e dúvidas do guia.
+- [ ] 04/12/2026 — revisar RTL v1.0 (ECB, CBC e CTR), interfaces de integração e divergências de DV.
+- [ ] 08/01/2027 — revisar RTL v1.1 (acréscimo de PCBC, CFB e OFB), regressão e pendências de aceite.
+- [ ] 22/01/2027 — alinhar pauta e revisar evidências/pendências para o encerramento de 29/01.
+
+As ações acima estão programadas, sem registro de realização; esta correção
+não envia mensagens ao parceiro.
 
 ## Histórico — Semana 1: estudo, ambiente e entrega — concluída
 
