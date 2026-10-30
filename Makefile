@@ -9,6 +9,7 @@ YOSYS ?= yosys
 RTL := rtl/smoke_top.sv
 TB := tb/tb_smoke_top.sv
 AES_PKG := rtl/minisoc_aes/aes_transforms_pkg.sv
+AES_TRANSFORMS_RTL := $(AES_PKG) rtl/minisoc_aes/minisoc_aes_sbox.sv rtl/minisoc_aes/minisoc_aes_sub_bytes.sv rtl/minisoc_aes/minisoc_aes_shift_rows.sv
 AES_DP_RTL := $(AES_PKG) rtl/minisoc_aes/minisoc_aes_dp.sv
 AES_KEY_RTL := $(AES_PKG) rtl/minisoc_aes/minisoc_aes_key_exp.sv
 AES_CORE_RTL := $(AES_DP_RTL) rtl/minisoc_aes/minisoc_aes_key_exp.sv rtl/minisoc_aes/minisoc_aes_core.sv
@@ -58,7 +59,18 @@ $(eval $(call AES_TEST,dp,minisoc_aes_dp,$(AES_DP_RTL)))
 $(eval $(call AES_TEST,key,minisoc_aes_key_exp,$(AES_KEY_RTL)))
 $(eval $(call AES_TEST,core,minisoc_aes_core,$(AES_CORE_RTL)))
 
-test-aes: test-aes-dp test-aes-key test-aes-core
+.PHONY: test-aes-transforms sim-aes-transforms compile-aes-transforms lint-aes-transforms
+test-aes-transforms: sim-aes-transforms
+sim-aes-transforms: compile-aes-transforms
+	$(VVP) build/aes_transforms.vvp
+compile-aes-transforms: lint-aes-transforms | build
+	$(IVERILOG) -g2012 -Wall -s minisoc_aes_transforms_tb -o build/aes_transforms.vvp $(AES_TRANSFORMS_RTL) tb/minisoc_aes_transforms_tb.sv
+lint-aes-transforms: check-tools
+	$(VERILATOR) --lint-only -Wall --top-module minisoc_aes_sbox $(AES_PKG) rtl/minisoc_aes/minisoc_aes_sbox.sv
+	$(VERILATOR) --lint-only -Wall --top-module minisoc_aes_sub_bytes $(AES_PKG) rtl/minisoc_aes/minisoc_aes_sub_bytes.sv
+	$(VERILATOR) --lint-only -Wall --top-module minisoc_aes_shift_rows $(AES_PKG) rtl/minisoc_aes/minisoc_aes_shift_rows.sv
+
+test-aes: test-aes-transforms test-aes-dp test-aes-key test-aes-core
 regression: smoke test-aes
 
 # Yosys/slang opcional; nao e dependencia de smoke/test-aes.
@@ -76,4 +88,4 @@ synth-aes: synth-aes-dp synth-aes-key synth-aes-core
 # Remove somente artefatos conhecidos; nunca faz exclusao recursiva.
 # Nao execute clean e smoke como alvos concorrentes; use comandos separados.
 clean:
-	rm -f build/smoke.vvp build/aes_dp.vvp build/aes_key.vvp build/aes_core.vvp
+	rm -f build/smoke.vvp build/aes_transforms.vvp build/aes_dp.vvp build/aes_key.vvp build/aes_core.vvp

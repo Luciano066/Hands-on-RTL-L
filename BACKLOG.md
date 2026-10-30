@@ -1,10 +1,70 @@
 # Backlog — MiniSoC AES
 
-Atualização: 29/10/2026. [x] indica execução/evidência técnica; aceite humano
+Atualização: 30/10/2026. [x] indica execução/evidência técnica; aceite humano
 é listado separadamente. Fonte funcional: Block Guide v1.0.0 local confidencial.
 Contrato atual: [arquitetura v1.1](docs/architecture/arquitetura_v1.1.md).
 
-## Semana 1 — Estudo, ambiente e entrega — concluída
+## Cronograma de 13 semanas
+
+Replanejamento solicitado em 30/10/2026. Os marcos informados são
+**04/12/2026** e **08/01/2027**. A data inicial, recessos, correspondência entre
+semanas e datas e conteúdo oficial dos marcos não vieram no enunciado desta
+correção e seguem a confirmar com o professor. A tabela é uma **proposta de
+distribuição em 13 semanas**, sem transformar hipóteses em calendário oficial.
+Os títulos Semana 1–6 no histórico abaixo identificam entregas anteriores.
+
+| Semana | Trabalho previsto | Situação técnica em 30/10 |
+|---|---|---|
+| 1 | Estudo AES/SPI, ambiente e requisitos | Ambiente e estudo registrados |
+| 2 | Arquitetura e desafio S-box/SubBytes/ShiftRows de 30/10 | Três módulos e 647 checks PASS; aceite pendente |
+| 3 | Rodada completa e transformações inversas | Datapath já implementado; 2.345 checks PASS |
+| 4 | Expansão de chave e core sequencial | Já implementados; 535 + 5.128 checks PASS |
+| 5 | SPI e banco de configuração | Futuro; resolver pendências com professor/DV |
+| 6 | CDC, ownership e RAM | Futuro; contratos e verificações pendentes |
+| 7 | PLL mock, reset e integração básica | Futuro |
+| 8 | Controlador dos modos e blocos em RAM | Futuro |
+| 9 | Verificação ponta a ponta com o parceiro | Futuro |
+| 10 | Síntese, restrições e análise de timing | Futuro; tecnologia/ferramentas a confirmar |
+| 11 | Avaliação de baixo consumo e UPF, se exigido | Futuro; requisitos a confirmar |
+| 12 | Correções, regressão e revisão de evidências com DV | Futuro |
+| 13 | Documentação final, demonstração e defesa | Futuro; aceite humano pendente |
+
+| Marco | Preparação / confirmação necessária |
+|---|---|
+| 04/12/2026 | Pactuar escopo e critérios com professor/DV; revisar implementação, testes e pendências antes da data |
+| 08/01/2027 | Pactuar escopo e critérios com professor/DV; revisar regressão, documentação e condições de aceite antes da data |
+
+O replanejamento não autoriza antecipar funcionalidades nesta correção.
+
+## Desafio obrigatório de 30/10/2026
+
+- [x] Auditar a `develop` em `5043910` e executar a regressão anterior.
+- [x] Expor `minisoc_aes_sbox`, `minisoc_aes_sub_bytes` e `minisoc_aes_shift_rows` como módulos combinacionais.
+- [x] Reutilizar funções AES e preservar package, datapath, expansão e core.
+- [x] Documentar interfaces e byte 0 em `[127:120]`, com State por colunas.
+- [x] Testar S-box 256/256, todas as posições SubBytes e FIPS B rodadas 1 e 10 separadamente.
+- [x] Integrar alvo `test-aes-transforms` à regressão e ao comando PowerShell existente.
+- [x] Executar lint sem erros/warnings, 647 checks novos e regressão de 8.655 checks AES + quatro XOR.
+- [x] Confirmar que quatro falhas deliberadas são detectadas pelo TB em cópias locais ignoradas.
+- [x] Preservar relatório anterior em `docs/reports/semana_02_historico_2026-10-09.md`.
+- [x] Atualizar relatório, README, vetores e planejamento, sem incluir o Block Guide.
+- [ ] Confirmar calendário detalhado das 13 semanas e critérios dos dois marcos.
+- [ ] Revisar dúvidas das seções 1–3 e 8 com o professor e o parceiro.
+- [ ] Apresentar o desafio e registrar aceite real do professor.
+
+## Contatos com o verificador parceiro
+
+Nenhum contato efetivo está comprovado nos registros recebidos. Nome/canal,
+datas, revisão apresentada, retorno e responsáveis devem ser preenchidos
+após cada contato no [relatório atualizado](docs/reports/semana_02.md#6-dúvidas-e-contato-com-o-verificador).
+
+- [ ] Após preparar a entrega de 30/10, combinar revisão de portas, State, vetores e dúvidas do guia; registrar nome/data/canal/retorno.
+- [ ] Antes de 04/12, revisar escopo do marco, interfaces de integração e divergências de DV; registrar revisão/commit.
+- [ ] Antes de 08/01, revisar regressão e pendências de aceite; registrar devolutivas e resolução.
+
+As ações acima são planejadas; esta correção não envia mensagens ao parceiro.
+
+## Histórico — Semana 1: estudo, ambiente e entrega — concluída
 
 Base validada e versionada: tag `w01-v1.0`, HEAD inicial desta entrega `de477dd`. Fontes e relatórios históricos preservados.
 
@@ -22,7 +82,7 @@ Base validada e versionada: tag `w01-v1.0`, HEAD inicial desta entrega `de477dd`
 - [x] Elaborar defesa com decisões, alternativas, trade-offs e 60 perguntas.
 - [x] Registrar explicitamente decisões funcionais pendentes.
 
-## Semana 2 — arquitetura revisada, aceite pendente
+## Histórico — Semana 2: arquitetura revisada, aceite pendente
 
 - [x] Auditar main/faaf745, árvore limpa e fontes da Semana 2.
 - [x] Ler integralmente Block Guide e revisão técnica recebidos.
@@ -38,7 +98,7 @@ As entregas documentais anteriores continuam históricas. Frame de 48 bits,
 mapa em bytes, VALID_MASK e payload SPI foram substituídos. Confirmação de
 requisitos no guia não encerra a Semana 2.
 
-## Semana 3 — datapath implementado e testado, aceite pendente
+## Histórico — Semana 3: datapath implementado e testado, aceite pendente
 
 - [x] Implementar SubBytes, ShiftRows, MixColumns e AddRoundKey.
 - [x] Implementar InvSubBytes, InvShiftRows e InvMixColumns.
@@ -51,7 +111,7 @@ requisitos no guia não encerra a Semana 2.
 - [x] Registrar versões, comandos, resultados e limites em semana_03.md.
 - [ ] Apresentar resultados e obter aceite do instrutor.
 
-## Semana 4 — expansão e controle AES implementados/testados, aceite pendente
+## Histórico — Semana 4: expansão e controle AES implementados/testados, aceite pendente
 
 - [x] Auditar branch be42888 limpa, registrar hashes de 36 arquivos e reexecutar regressão anterior.
 - [x] Centralizar receitas/diretório do Makefile, preservando os alvos antigos.
@@ -69,7 +129,7 @@ requisitos no guia não encerra a Semana 2.
 bloco. DONE pulsado e START ocupado ignorado são escolhas locais, sem fechar
 políticas oficiais de status/concorrência do MiniSoC.
 
-## Semana 5 — SPI, controle e CDC
+## Pendências herdadas — SPI, controle e CDC (antiga Semana 5)
 
 - [ ] Resolver P14/P21/P22/P24/P25 com instrutor e DV antes de fixar o protocolo detalhado.
 - [ ] Implementar minisoc_spi.sv: Mode 0, frame de 40 bits, read em duas transações.
@@ -77,7 +137,7 @@ políticas oficiais de status/concorrência do MiniSoC.
 - [ ] Testar abort/back-to-back/reset/clocks pausados e ausência de commit duplicado.
 - [ ] Implementar snapshots de configuração/status com verificação de coerência CDC.
 
-## Semana 6 — memória, PLL e integração
+## Pendências herdadas — memória, PLL e integração (antiga Semana 6)
 
 - [ ] Resolver contrato idle/mux de clock da RAM e latência de leitura (P18/P19).
 - [ ] Implementar RAM 1024 x 32 sem reset, ownership exclusivo e acesso externo síncrono.

@@ -8,6 +8,56 @@ forward/inverse, com testes autochecking. A Semana 4 acrescenta expansão de
 chave e núcleo sequencial de bloco único, testados em ambos os sentidos.
 O SoC integrado ainda não existe; aceite do instrutor permanece pendente.
 
+Em **30/10/2026**, o desafio obrigatório acrescenta três módulos
+combinacionais com os nomes `minisoc_aes_sbox`, `minisoc_aes_sub_bytes` e
+`minisoc_aes_shift_rows`. Eles reutilizam o package existente, com byte 0 do
+State em `[127:120]`. Datapath, expansão e core sequencial foram preservados.
+Veja o [relatório atualizado da Semana 2](docs/reports/semana_02.md) e o
+[relatório histórico de 09/10](docs/reports/semana_02_historico_2026-10-09.md).
+
+## Desafio de 30/10 e execução em um comando
+
+No Windows com o toolchain portátil existente, este comando executa lint,
+compilação e todas as suítes, incluindo o novo desafio:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_aes_tests.ps1 -Clean
+```
+
+Com as ferramentas no PATH: `make -j4 regression` ou
+`bash scripts/run_aes_tests.sh`. Para somente os três módulos:
+`make test-aes-transforms`; lint isolado: `make lint-aes-transforms`.
+Falhas interrompem o alvo e retornam código diferente de zero.
+
+| Módulo | Entrada | Saída | Função reutilizada |
+|---|---|---|---|
+| `minisoc_aes_sbox` | `byte_i[7:0]` | `byte_o[7:0]` | `aes_sbox` |
+| `minisoc_aes_sub_bytes` | `state_i[127:0]` | `state_o[127:0]` | `sub_bytes` |
+| `minisoc_aes_shift_rows` | `state_i[127:0]` | `state_o[127:0]` | `shift_rows` |
+
+Os três módulos usam atribuições contínuas, sem clock, reset ou armazenamento.
+`s[row,col]` corresponde ao byte `row+4*col`. O novo TB realiza **647 checks**:
+256 entradas da S-box, 256 estados SubBytes cobrindo todas as posições,
+comparações individuais de SubBytes/ShiftRows nas rodadas 1 e 10 do
+Apêndice B da FIPS-197 e 131 casos de permutação. As constantes e a origem
+pública estão documentadas em [tb/vectors](tb/vectors/README.md).
+
+## Cronograma de 13 semanas e revisão com DV
+
+O [BACKLOG](BACKLOG.md#cronograma-de-13-semanas) passa a organizar o trabalho
+em **13 semanas**, preservando separadamente as evidências das etapas antigas.
+Os marcos informados são **04/12/2026** e **08/01/2027**. A data inicial,
+eventuais recessos e o conteúdo oficial de cada marco ainda precisam de
+confirmação; a distribuição das atividades no backlog é uma proposta de
+trabalho, sem datas semanais presumidas.
+
+O contato com o verificador deve cobrir agora as portas dos três módulos,
+ordem dos bytes e os vetores oficiais; antes de cada marco, revisar evidências
+e divergências. **Nome, canal, datas e retornos ainda não estão registrados**.
+A pauta e o quadro de contatos estão no
+[relatório de 30/10](docs/reports/semana_02.md#6-dúvidas-e-contato-com-o-verificador).
+Não há contato ou aceite atribuído ao parceiro nesta correção.
+
 ## Documentação vigente
 
 - [Arquitetura v1.1](docs/architecture/arquitetura_v1.1.md): contratos, quatro grupos de portas, clocks, RAM, SPI, modos e interface do datapath.
@@ -31,10 +81,10 @@ defesa de 09/10 são históricos superados. Seu mapa, frame de 48 bits, máscara
 domínio do banco e cronograma não são contratos vigentes. O PDF confidencial
 e a revisão técnica recebidos não integram o repositório.
 
-## Testar a Semana 4 e a regressão completa
+## Núcleo sequencial e regressão completa
 
-Com o toolchain ativado, `make -j4 regression` executa XOR, datapath,
-Key Expansion e core. Foram observadas **8.008 verificações AES PASS**,
+Com o toolchain ativado, `make -j4 regression` executa XOR, transformações,
+datapath, Key Expansion e core. Em 30/10 foram observadas **8.655 verificações AES PASS**,
 além dos quatro casos XOR, sem warnings. Key Expansion: 535 checks e
 22 chaves oficiais; core: 5.128 checks, 52 operações e 42 cortes por reset.
 Latências locais medidas: expansão 10 ciclos; core 21 ciclos, nos dois sentidos.
@@ -48,7 +98,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_aes_tests.ps
 Sem `-Synthesis`, Yosys não é necessário. Alvos individuais:
 `make test-aes-key`, `make test-aes-core`; síntese genérica: `make synth-aes`.
 `bash scripts/run_aes_tests.sh` executa a regressão e localiza a raiz.
-A síntese genérica dos três blocos passou com zero problemas; não valida
+A síntese genérica anterior de dp/key/core passou com zero problemas; não valida
 timing dos clocks do PLL. Consulte o relatório da Semana 4 para comandos,
 versões e limites. As políticas SPI/CDC/RAM ainda OPEN não foram aprovadas.
 
@@ -167,6 +217,7 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 |       |-- semana_01_validacao.md
 |       |-- semana_01_alteracoes.md
 |       |-- semana_02.md
+|       |-- semana_02_historico_2026-10-09.md
 |       |-- semana_02_diagnostico.md
 |       |-- semana_02_defesa.md
 |       |-- semana_02_verificador.md
@@ -174,8 +225,10 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 |       |-- semana_03.md
 |       |-- semana_04.md
 |-- rtl/minisoc_aes/{aes_transforms_pkg.sv,minisoc_aes_dp.sv}
+|-- rtl/minisoc_aes/{minisoc_aes_sbox.sv,minisoc_aes_sub_bytes.sv,minisoc_aes_shift_rows.sv}
 |-- rtl/minisoc_aes/{minisoc_aes_key_exp.sv,minisoc_aes_core.sv}
 |-- tb/minisoc_aes_dp_tb.sv
+|-- tb/minisoc_aes_transforms_tb.sv
 |-- tb/{minisoc_aes_key_exp_tb.sv,minisoc_aes_core_tb.sv}
 |-- tb/vectors/README.md
 |-- rtl/smoke_top.sv
@@ -207,6 +260,8 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 | `make lint` | Verifica ferramentas e executa Verilator no RTL |
 | `make compile` | Inclui lint e gera build/smoke.vvp com Icarus |
 | `make sim` | Inclui lint e compilação antes de executar vvp |
+| `make test-aes-transforms` | Lint dos três módulos obrigatórios, compilação e 647 checks, incluindo FIPS B rodadas 1 e 10 |
+| `make lint-aes-transforms` | Verilator `--lint-only -Wall` individualmente em S-box, SubBytes e ShiftRows |
 | `make test-aes-dp` | Lint, compilação e simulação autochecking do datapath AES |
 | `make lint-aes-dp` | Verilator no package e módulo de rodada |
 | `make compile-aes-dp` | Lint e compilação Icarus, sem executar a simulação |
@@ -214,11 +269,11 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 | `make synth-aes-dp` | Síntese genérica opcional e check no Yosys com frontend slang |
 | `make test-aes-key` / `make test-aes-core` | Lint, compilação e TBs independentes dos módulos sequenciais |
 | `make lint-aes-key` / `make lint-aes-core` | Lint Verilator dos novos módulos e suas dependências |
-| `make test-aes` | Três suites AES: datapath, chaves e core |
+| `make test-aes` | Quatro suítes AES: transformações obrigatórias, datapath, chaves e core |
 | `make regression` | Smoke XOR e todas as suites AES, seguro para make -j4 |
 | `make synth-aes` | Síntese genérica dp/key/core; alvos individuais synth-aes-key e synth-aes-core |
 | `make versions` | Mostra versões reais das ferramentas |
-| `make clean` | Remove somente os quatro binários .vvp conhecidos; preserva fontes, ferramentas e logs |
+| `make clean` | Remove somente os cinco binários .vvp conhecidos; preserva fontes, ferramentas e logs |
 
 As variáveis `VERILATOR`, `IVERILOG`, `VVP` e `YOSYS` permitem escolher executáveis no PATH. Para ferramentas em caminhos com espaços, prefira ativar o diretório no PATH e usar o nome do executável.
 

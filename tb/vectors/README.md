@@ -27,6 +27,32 @@ Byte `i` ocupa `[127-8*i -: 8]`; `s[row,col]=byte[row+4*col]`.
 As quatro palavras de memória correspondem, em ordem, a `[127:96]`,
 `[95:64]`, `[63:32]`, `[31:0]`.
 
+## Desafio obrigatório de 30/10/2026 — módulos isolados
+
+`../minisoc_aes_transforms_tb.sv` instancia `minisoc_aes_sbox`,
+`minisoc_aes_sub_bytes` e `minisoc_aes_shift_rows`, sem importar o package
+do DUT para formar os resultados esperados. A constante `FIPS_SBOX` contém
+as 256 entradas da tabela 4 da FIPS 197-upd1, ordenadas por entrada de 00 a ff.
+Além da S-box isolada, 256 estados com bytes distintos exercitam todas as
+entradas em cada uma das 16 posições de SubBytes.
+
+Os estados abaixo vêm do **Apêndice B**, páginas impressas 34–35,
+páginas físicas 42–43 do [PDF FIPS 197-upd1](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf).
+São serializados por colunas, com byte 0 em `[127:120]`.
+
+| Rodada | Início da rodada | Após SubBytes | Após ShiftRows |
+|---|---|---|---|
+| 1 | `193de3bea0f4e22b9ac68d2ae9f84808` | `d42711aee0bf98f1b8b45de51e415230` | `d4bf5d30e0b452aeb84111f11e2798e5` |
+| 10 | `eb40f21e592e38848ba113e71bc342d2` | `e9098972cb31075f3d327d94af2e2cb5` | `e9317db5cb322c723d2e895faf090794` |
+
+O exemplo usa plaintext `3243f6a8885a308d313198a2e0370734` e chave
+`2b7e151628aed2a6abf7158809cf4f3c`. O início da rodada 1 já inclui o
+AddRoundKey inicial. O TB aplica a constante oficial após SubBytes diretamente
+à entrada de ShiftRows; uma falha em SubBytes não modifica o estímulo de
+ShiftRows. O exemplo `AES_Core128.pdf` da suíte antiga é diferente e continua
+preservado. Completam a suíte nova a permutação explícita `00..0f`, 128 estados
+one-hot e os estados zero/um: **647 verificações autochecking**, sem clock.
+
 ## Semana 4 — expansão e core sequencial
 
 Fixtures `aes128_round_keys_a.mem` e `aes128_round_keys_b.mem`: onze linhas

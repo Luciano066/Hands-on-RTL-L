@@ -1,102 +1,215 @@
-> **Histórico de 09/10/2026, contrato v1.0 superado.** Em 29/10/2026,
-> a leitura do Block Guide motivou a [arquitetura v1.1](../architecture/arquitetura_v1.1.md).
-> Use o [relatório/roteiro de retomada](semana_02_retomada.md) para a defesa atual
-> e o [relatório da Semana 3](semana_03.md) para os testes AES. Semana 2 segue
-> sem apresentação/aceite registrados. As afirmações abaixo descrevem a entrega antiga.
+# Semana 2 — desafio obrigatório de 30/10/2026
 
-# Entrega documental e revisão — Semana 2
+Data: 30/10/2026. Branch: `develop`; base auditada: `5043910`.
+**Resultado técnico: três módulos combinacionais implementados e testados;
+apresentação ao verificador e aceite do professor continuam pendentes.**
 
-Data: 09/10/2026. Base inicial: `de477dd`, tag `w01-v1.0`, árvore limpa antes das edições.
+## 1. Escopo e histórico
 
-**Situação: arquitetura preparada para defesa; Semana 2 ainda não concluída.** Faltam confirmação dos requisitos essenciais, apresentação/revisão com o verificador e aprovação do instrutor. Não houve implementação funcional AES/SPI nem envio a terceiros.
+O desafio informado exige `minisoc_aes_sbox`, `minisoc_aes_sub_bytes` e
+`minisoc_aes_shift_rows`, com byte 0 do State em `[127:120]`. A correção expõe
+as funções AES existentes como módulos e acrescenta verificação isolada.
+Datapath e núcleo sequencial já validados foram preservados.
 
-## 1. Resultado preparado
+O relatório anterior foi copiado integralmente para
+[semana_02_historico_2026-10-09.md](semana_02_historico_2026-10-09.md).
+Seu SHA256, idêntico ao arquivo de origem antes da substituição, é
+`4f47959cccd777f092d3d3003fcdfb1a00d2c1e71957d8de4d53cad12342f488`.
+A [arquitetura v1.1](../architecture/arquitetura_v1.1.md) e os relatórios
+[da rodada](semana_03.md) e [do core](semana_04.md) continuam como evidência
+das implementações anteriores, sem confundir sua numeração com o replanejamento.
 
-AES-128 e somente cifragem são hipóteses funcionais da baseline provisória, com datapath iterativo de 128 bits e uma rodada por ciclo. Expansão adiantada é decisão arquitetural provisória; 16 + 4 S-boxes são hipótese arquitetural a validar por síntese, STA e atividade. Nenhuma delas é requisito oficial confirmado ou solução comprovadamente ótima.
+O checkout inicial estava limpo na `main`, em `46eb75d`; foi trocado para a
+`develop` solicitada, também limpa, antes das edições. Não foi feito merge.
+O Block Guide confidencial não está no workspace desta revisão e não foi
+relido nem reproduzido. Para integração, foram consultados os contratos e
+as pendências já registrados no repositório. Os vetores novos vêm somente
+da fonte pública [FIPS 197-upd1 do NIST](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf).
 
-SPI modo 0 é **baseline provisório**, pendente da confirmação do instrutor e do mestre. O mapa proposto usa palavras de 32 bits e frames de 48 clocks; banco em SCLK, máscaras de completude e bloqueio durante BUSY. Handshake de quatro fases com dados estáveis conecta ao sistema; as onze etapas agora distinguem origem/destino em ambos os sentidos. Reset comum ativo baixo é decisão arquitetural provisória; sua liberação local pode ficar bloqueada sem SCLK, risco ainda aberto.
+## 2. Auditoria do RTL e interfaces
 
-**Latência revisada:** aceitação do start local e carga em E0; onze ciclos internos de cálculo até publicação de done/data_out após E11; captura pelo adaptador em E12. Há doze bordas E0–E11 inclusive e **quatro estados distintos de FSM**, não doze estados. A frase “11 períodos após aceitar start local” permanece correta sob esse escalonamento; não se aplica a CONTROL.START → STATUS.DONE, cuja latência inclui SPI/CDC e é variável.
-
-Essas são escolhas para discussão, não requisitos oficiais extraídos do FIPS. O fundamento e os trade-offs estão na [arquitetura v1.0](../architecture/arquitetura_v1.0.md). A frase de baseline provisório solicitada aparece ali, nos ADRs e nas pendências.
-
-## 2. Arquivos criados e modificados
-
-| Arquivo | Ação | Conteúdo |
-|---|---|---|
-| docs/architecture/arquitetura_v1.0.md | Criado | Contrato completo, dois diagramas Mermaid, tabelas de interface/mapa/ciclos, comparações, 20 riscos e perguntas ao professor |
-| docs/architecture/decisoes_semana_02.md | Criado | 12 decisões em formato ADR, com todos os oito campos solicitados |
-| docs/reports/semana_02_diagnostico.md | Criado | Estado e decisões antes das alterações, leitura da Semana 1 e plano de evolução |
-| docs/reports/semana_02_defesa.md | Criado | Roteiro de cinco minutos, 100 perguntas e respostas, plano de estudo |
-| docs/reports/semana_02_verificador.md | Criado | Apresentação de 15 minutos, contratos, 39 verificações futuras e registro de revisão pendente |
-| docs/reports/semana_02.md | Criado | Este relatório de entrega, verificações e limites |
-| BACKLOG.md | Modificado | Semana 1 concluída; Semana 2 com material preparado, decisões, perguntas e aceite pendente |
-| README.md | Modificado | Navegação da Semana 2, baseline proposta e correção do estado histórico do Git |
-| docs/architecture/README.md | Modificado | Índice da nova arquitetura e seu status |
-| docs/spec/pendencias.md | Modificado | Histórico P01–P13 preservado e evolução das propostas acrescentada |
-
-Nenhuma modificação em RTL, TB, Makefile, scripts, `.gitattributes`, `.gitignore`, relatórios da Semana 1 ou README de formal/syn/upf. Não foram criados stubs porque as tabelas e o pseudocódigo já fixam os contratos sem confundir proposta com implementação.
-
-Na revisão solicitada após a primeira redação, foram alterados **nove desses documentos**: todos os itens da tabela exceto `semana_02_diagnostico.md`, que preserva o diagnóstico anterior às primeiras edições. “Criado” na tabela refere-se à entrega acumulada da Semana 2; os arquivos novos continuam sem commit.
-
-### Principais correções: antes → depois
-
-| Tema | Antes | Depois desta revisão |
-|---|---|---|
-| Status das escolhas | Proposta indicada globalmente; alguns trechos apenas diziam “modo 0” ou “escolhido” | Rótulos explícitos: hipóteses AES-128/cifragem, baseline SPI modo 0, decisões provisórias de reset/expansão, hipótese 16 + 4 a validar por síntese |
-| Latência / FSM | 11 períodos e 12 bordas, sem quadro separado de conceitos | Tabela E0–E12 com captura final/consumo; 11 ciclos de cálculo, publicação após E11, consumo E12 e quatro estados distintos |
-| S-box | Contagem 16 + 4 com trade-offs gerais | Justificativa por byte/SubWord, custos e caminhos concorrentes, alternativas de compartilhamento e efeito em throughput |
-| CDC | Seis passos agrupados | Onze etapas, origem/destino de cada barramento, ACK retardado até resultado, tabela de controles e diagrama de sequência |
-| Reset pausado | Quatro clocks sugeridos como contrato de partida | Condição provisória dependente do mestre; risco alto aberto, alternativas comparadas e pergunta obrigatória ao professor |
-| DONE | Limpeza descrita sem comparar as três políticas | done interno, DONE sticky e BUSY transacional separados; comparação de novo START, W1C e leitura; combinação provisória START aceito + CONTROL.CLR_DONE |
-| Máscaras / mapa | Máscaras genéricas e mapa de endereços | KEY_VALID_MASK/DATA_IN_VALID_MASK explícitas, tabela de eventos/exemplo; natureza de cada registro e STATUS local esclarecidos |
-| Riscos / defesa | 16 riscos, 96 perguntas | 20 riscos, 100 perguntas; separação de mudança de variante, decifragem, modo SPI, frequências e tecnologia |
-
-## 3. Validação realmente executada
-
-Comando na raiz do projeto:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_smoke.ps1
-```
-
-Resultado da nova execução após esta revisão, em 09/10/2026: exit code 0. Verilator executou lint; Icarus recompilou RTL + TB; vvp executou os quatro casos da XOR. Não houve warnings no smoke. Trecho da saída:
+`aes_transforms_pkg.sv` já implementa S-box por `case` completo com `default`,
+SubBytes sobre os 16 bytes e ShiftRows com deslocamento por linha. As funções
+são automáticas, atribuem todas as posições e não contêm relógio, estado,
+inicialização ou atraso. O empacotamento já era o exigido:
 
 ```text
-verilator_bin --lint-only -Wall --top-module smoke_top rtl/smoke_top.sv
-iverilog -g2012 -Wall -s tb_smoke_top -o build/smoke.vvp rtl/smoke_top.sv tb/tb_smoke_top.sv
-vvp build/smoke.vvp
-SMOKE TEST PASS
-tb/tb_smoke_top.sv:35: $finish called at 4000 (1ps)
-Semana 1: fluxo minimo concluido com sucesso.
+byte[i] = state[127-8*i -: 8]
+s[row,col] = byte[row+4*col]
+byte[0] = state[127:120]
 ```
 
-Verilator reportou `5.053 devel rev v5.052-119-g014c9820d (mod)`, consistente com a base. Não foi reinstalado toolchain, alterado PATH global ou alterada política global. `build/smoke.vvp` foi regenerado como artefato local ignorado; os ensaios negativos extensivos da Semana 1 não precisaram ser repetidos porque seus fontes e fluxo foram preservados.
+| Módulo / arquivo em `rtl/minisoc_aes/` | Entrada | Saída | Implementação |
+|---|---|---|---|
+| `minisoc_aes_sbox.sv` | `byte_i[7:0]` | `byte_o[7:0]` | `assign` de `aes_transforms_pkg::aes_sbox` |
+| `minisoc_aes_sub_bytes.sv` | `state_i[127:0]` | `state_o[127:0]` | `assign` de `aes_transforms_pkg::sub_bytes` |
+| `minisoc_aes_shift_rows.sv` | `state_i[127:0]` | `state_o[127:0]` | `assign` de `aes_transforms_pkg::shift_rows` |
 
-Foi conferida a ausência de diferenças nos arquivos executáveis e históricos preservados via `git diff --exit-code`, com retorno zero. `git diff --check` não apontou erros de whitespace.
+Essas são as interfaces públicas desta implementação. Não existem portas de
+clock/reset/enable/valid, registradores ou latência em ciclos. As saídas seguem
+as entradas combinacionalmente. `#1` aparece apenas no TB para acomodação da
+simulação. O package deve ser compilado antes dos módulos consumidores.
 
-Os dois diagramas Mermaid foram processados pelo renderizador local compatível `grok-mermaid 0.2.2`, já disponível no ambiente, sem instalação ou download. Ambos produziram diagramas textuais sem warnings; a sequência foi inspecionada. Isso verifica a sintaxe suportada por esse renderizador, sem afirmar renderização gráfica no motor oficial do Mermaid. Artefatos de conferência ficam apenas em `build/semana_02_revisao/`, ignorado pelo Git.
+O reaproveitamento evita manter uma segunda implementação funcional de AES.
+O `git diff --exit-code` confirmou ausência de alterações no package,
+`minisoc_aes_dp.sv`, `minisoc_aes_key_exp.sv`, `minisoc_aes_core.sv` e nos
+três TBs anteriores. Permanecem os contratos locais: expansão em 10 ciclos,
+core em 21 ciclos, cipher/inverse, reset/abort e pulso DONE.
 
-A conferência estrutural retornou `DOCUMENT REVIEW CHECK PASS`: 14 arquivos Markdown UTF-8, 55 links relativos válidos, 100 perguntas sequenciais, 12 ADRs com os oito campos, 20 riscos, 39 cenários futuros, 13 linhas E0–E12 e 11 etapas CDC. Os 15 endereços continuam iguais à redação anterior, alinhados e sem sobreposição (60 bytes mapeados); acessos RO/RW, larguras, reset e domínio também foram preservados. Máscaras e tipo de armazenamento foram explicitados documentalmente, sem implementação.
+## 3. Arquivos da correção
 
-Os hashes SHA256 dos **16 arquivos de fontes/configuração/relatórios preservados da Semana 1** permanecem idênticos ao início desta revisão; `git diff --exit-code` desses arquivos também retornou zero. A checagem identificou nove documentos efetivamente alterados, mantendo o diagnóstico intacto. O resumo local está em `build/semana_02_revisao/conferencia_documental.json`.
+| Arquivo | Alteração |
+|---|---|
+| `rtl/minisoc_aes/minisoc_aes_sbox.sv` | Novo módulo combinacional de um byte |
+| `rtl/minisoc_aes/minisoc_aes_sub_bytes.sv` | Novo módulo combinacional de 128 bits |
+| `rtl/minisoc_aes/minisoc_aes_shift_rows.sv` | Novo módulo combinacional de 128 bits |
+| `tb/minisoc_aes_transforms_tb.sv` | Novo TB autochecking dos três módulos, sem importar funções do DUT |
+| `tb/vectors/README.md` | Origem, serialização e estados oficiais do Apêndice B |
+| `Makefile` | Alvos lint/compile/sim/test de transforms; inclusão em test-aes/regression e clean |
+| `docs/reports/semana_02.md` | Este relatório de 30/10 |
+| `docs/reports/semana_02_historico_2026-10-09.md` | Cópia integral do relatório anterior |
+| `README.md` / `BACKLOG.md` | Interfaces, comando único, resultados, proposta de 13 semanas, marcos e contatos pendentes |
 
-A revisão semântica conferiu as seis escolhas provisórias nos documentos atuais e comparou os contratos de latência, CDC, reset, máscaras e flags. Nenhuma hipótese foi promovida a requisito confirmado. O quadro “antes → depois” e a seção histórica da Semana 1 registram estados anteriores como histórico, não como contratos atuais. Não foi executado modelo funcional do acelerador.
+Os scripts existentes `run_aes_tests.ps1` e `run_aes_tests.sh` não precisaram
+de alteração: chamam `regression`, que agora inclui o desafio. Nenhuma função
+adicional do SoC foi implementada.
 
-**Limite da evidência:** o PASS continua validando somente a XOR e o ambiente. Não houve teste funcional AES, teste de protocolo SPI/CDC, prova formal, síntese, fechamento de timing, avaliação de MTBF ou medição de potência. O Mermaid é fonte textual para renderizadores compatíveis; não é desenho de uma netlist implementada.
+## 4. Testbench e referências oficiais
 
-## 4. Revisão crítica e próximos responsáveis
+O novo TB instancia os três módulos reais. A constante `FIPS_SBOX` contém a
+tabela 4 da FIPS 197, com 256 valores de referência. A S-box isolada percorre
+00..ff; SubBytes recebe 256 estados de bytes distintos, exercitando cada valor
+em cada posição. Não se usa uma função do DUT para calcular o esperado.
 
-A [seção 15 da arquitetura](../architecture/arquitetura_v1.0.md) registra 20 riscos com níveis e mitigação. Inclui explicitamente mudança AES-128→192/256, exigência de decifragem, alteração do modo SPI, timing de Round Logic/Key Expansion, custo de 20 S-boxes, coerência física do CDC, reset SPI sem SCLK, frequências desconhecidas e ausência de estimativas com tecnologia/PDK. Há também limitações deliberadas: um único slot, nenhuma escrita de operandos durante BUSY, ausência de códigos de erro detalhados e chave legível.
+Para SubBytes e ShiftRows, o TB compara individualmente as constantes do
+**Apêndice B**, páginas impressas 34–35 / físicas 42–43 do PDF atualizado:
 
-Para estudar: desenhar o fluxo, repetir E0–E12 e os quatro estados, justificar 16 + 4 S-boxes e suas alternativas, percorrer o handshake com SCLK parado, explicar máscaras e done/DONE/BUSY, comparar área/throughput/energia. As 100 respostas servem de roteiro, não de substituto para compreender os contratos.
+| Rodada | Início da rodada | Após SubBytes | Após ShiftRows |
+|---|---|---|---|
+| 1 | `193de3bea0f4e22b9ac68d2ae9f84808` | `d42711aee0bf98f1b8b45de51e415230` | `d4bf5d30e0b452aeb84111f11e2798e5` |
+| 10 | `eb40f21e592e38848ba113e71bc342d2` | `e9098972cb31075f3d327d94af2e2cb5` | `e9317db5cb322c723d2e895faf090794` |
 
-Levar ao professor: variantes/operações/modos; mestre SPI e mapa; reset e, **obrigatoriamente, quem fornece SCLK para liberar reset e qual alternativa usar sem clocks de inicialização**; frequências/pinos; metas de área/energia/MTBF; tecnologia/ferramentas; hipótese de 20 S-boxes/expansão adiantada; proteção da chave; forma de aceite. O estudante e o parceiro devem registrar a apresentação efetiva no [pacote de revisão](semana_02_verificador.md).
+Plaintext do exemplo: `3243f6a8885a308d313198a2e0370734`; chave:
+`2b7e151628aed2a6abf7158809cf4f3c`. A rodada 1 começa após o AddRoundKey
+inicial. ShiftRows recebe a constante oficial após SubBytes diretamente,
+sem depender da saída produzida por SubBytes no teste. O TB anterior usa
+outro exemplo NIST, preservado; ele sozinho não comprovava o Apêndice B.
 
-## 5. Versionamento sugerido
+Há ainda 128 vetores one-hot, uma permutação com bytes `00..0f` e estados
+zero/um para ShiftRows. Total: **647 checks** = 256 S-box + 256 SubBytes +
+4 comparações oficiais + 131 permutações. Comparações usam `!==` e falham
+por `$fatal(1, ...)`, com diagnóstico de obtido/esperado e watchdog.
 
-Mensagem de commit: `docs: prepara arquitetura v1.0 e defesa da Semana 2`.
+## 5. Comandos, testes executados e resultados
 
-Tag sugerida: `w02-architecture-v1.0`, identificando esta revisão documental. Sua anotação deve informar “proposta para defesa; aceite pendente” se criada antes da aprovação; alternativamente, criar a tag após incorporar o aceite. Não usar a tag como evidência de aprovação que não ocorreu.
+Comando completo no Windows, com a instalação portátil existente:
 
-Commit, tag e push não foram executados automaticamente. A lista acima delimita os dez arquivos da entrega; conferir `git status --short` antes de versionar.
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_aes_tests.ps1 -Clean
+```
+
+Com toolchain no PATH, `make -j4 regression` executa o mesmo conjunto;
+`bash scripts/run_aes_tests.sh` também localiza a raiz. Para a suíte isolada:
+
+```sh
+make test-aes-transforms
+make lint-aes-transforms
+```
+
+`test-aes-transforms` encadeia lint dos três tops → compilação Icarus → vvp.
+O package é listado primeiro. O encadeamento continua válido com `make -j4`.
+Os dois últimos comandos são alternativas de inspeção, não etapas manuais
+necessárias ao comando completo.
+
+| Execução em 30/10/2026 | Resultado observado |
+|---|---|
+| Regressão anterior às edições, mesmo script com `-Clean` | Exit 0; 8.008 checks AES + quatro casos XOR |
+| Regressão ampliada pelo comando único, após a correção | Exit 0; 8.655 checks AES + quatro casos XOR |
+| `make -j4 test-aes-transforms` | Exit 0; 647 checks, S-box 256/256, FIPS B rodadas 1 e 10 |
+| Verilator individualmente em S-box, SubBytes e ShiftRows | `--lint-only -Wall`, exit 0; sem erros/warnings |
+| Datapath anterior | 2.345 checks; quatro cifragens + quatro decifragens KAT |
+| Key Expansion anterior | 535 checks, 22 chaves oficiais; latência 10 ciclos |
+| Core sequencial anterior | 5.128 checks, 52 operações concluídas, 42 cortes por reset; latência 21 ciclos |
+| Quatro ensaios negativos em cópias sob `build/challenge_3010/` | Todos detectados por `$fatal`, vvp exit 1 e sem PASS final |
+
+Os ensaios negativos alteraram: S-box somente em `ff`; ordem dos bytes de
+SubBytes; ShiftRows substituído por identidade; último bit da referência
+ShiftRows da rodada 10. Isso confirma a detecção de falhas nos três módulos
+e na comparação específica da rodada 10. O script local de auditoria foi
+`powershell.exe -NoProfile -ExecutionPolicy Bypass -File build/check_challenge.ps1`;
+scripts, cópias e logs desses ensaios ficam ignorados em `build/`. A suíte
+positiva distribuída não depende deles. Os RTL/TBs reais não foram mutados.
+
+Trecho da execução positiva:
+
+```text
+SBOX EXHAUSTIVE PASS: 256 inputs; SubBytes: 256 states, all 16 lanes
+FIPS APPENDIX B ROUND 1 PASS: SubBytes and ShiftRows
+FIPS APPENDIX B ROUND 10 PASS: SubBytes and ShiftRows
+AES TRANSFORMS TEST PASS: 647 checks, S-box 256/256, FIPS B rounds 1 and 10
+AES KEY EXPANSION TEST PASS: 535 checks, 22 official keys, forward/reverse, latency=10 cycles
+AES SEQUENTIAL CORE TEST PASS: 5128 checks, 52 completed KATs, 42 reset cuts, latency=21 cycles
+AES DATAPATH TEST PASS: 2345 checks, 4 encrypt + 4 decrypt KATs
+SMOKE TEST PASS
+```
+
+A ordem das mensagens entre suítes pode variar devido ao `-j4`.
+Ferramentas realmente usadas: GNU Make 4.4.1; Verilator 5.053 devel,
+`v5.052-119-g014c9820d (mod)`, executável `verilator_bin`; Icarus/vvp 14.0
+devel, `s20260301-500-g2e81fcccb-dirty`.
+
+**Warnings e ajuste durante a validação:** nenhum warning no fluxo positivo
+final de lint/compilação/simulação. Não foi usada supressão geral de warnings
+nem `-Wno-fatal`. A primeira execução do TB novo falhou porque os valores
+e5/e6 da tabela de referência foram transcritos em ordem trocada; a constante
+foi corrigida e toda a regressão passou. Não houve alteração no RTL legado.
+Os relatórios informativos do Verilator e as mensagens `$finish` não são
+warnings. Verilator foi usado para lint; a execução do TB foi feita por vvp.
+
+A conferência documental passou em cinco arquivos Markdown UTF-8, com 37
+links relativos válidos, 13 semanas no plano, os dois marcos e cópia histórica
+idêntica à base. `git diff --check` não apontou erros de whitespace.
+
+## 6. Dúvidas e contato com o verificador
+
+Perguntas para revisão das seções **1–3 e 8** do Block Guide. São dúvidas
+de aceite e integração a partir do enunciado e dos registros existentes,
+sem atribuir respostas ao professor nem reproduzir o documento confidencial:
+
+| Seção | Pergunta a confirmar |
+|---|---|
+| 1 | Como o desafio de 30/10 é avaliado separadamente do MiniSoC completo e do aceite arquitetural ainda pendente? |
+| 2 | Qual é a data inicial das 13 semanas, quais recessos se aplicam e quais entregáveis/critérios correspondem a 04/12/2026 e 08/01/2027? |
+| 3 | Além dos nomes de módulos exigidos, há nomes de portas obrigatórios? As interfaces `byte_i/byte_o` e `state_i/state_o` propostas são aceitas pelo ambiente do parceiro? |
+| 8 | O encapsulamento combinacional das funções do package atende à forma de entrega? Confirmar convenção por colunas/byte 0 no MSB, fronteiras dos estados das rodadas e tratamento esperado de X/Z no ambiente de DV. |
+
+As pendências de integração [P14–P27](../spec/pendencias.md) continuam abertas,
+incluindo SPI, reset/CDC, RAM, modos, ferramentas e critérios físicos. Elas
+não bloqueiam a verificação puramente combinacional desta entrega.
+
+| Contato previsto | Pauta | Registro efetivo em 30/10 |
+|---|---|---|
+| Após preparar o desafio de 30/10 | Interfaces dos três módulos, ordem dos bytes, tabela S-box, FIPS B e comando único | Parceiro/nome/canal/data/retorno não informados; revisão pendente |
+| Antes do marco de 04/12/2026 | Escopo do marco, contratos de integração e divergências de DV | Planejado; não realizado nesta correção |
+| Antes do marco de 08/01/2027 | Regressão, evidências, correções e condições de aceite | Planejado; não realizado nesta correção |
+
+Após cada contato, registrar nome, data/canal, revisão/commit apresentado,
+retorno, responsáveis e pendências. Não há mensagem enviada nem concordância
+presumida. O [pacote antigo do verificador](semana_02_verificador.md) permanece
+histórico; o material atual para esta pauta é este relatório e o TB novo.
+
+## 7. Planejamento, limites e versionamento
+
+README e [BACKLOG](../../BACKLOG.md#cronograma-de-13-semanas) agora distinguem
+o plano de **13 semanas** das entregas históricas. Os marcos de **04/12/2026**
+e **08/01/2027** estão registrados; calendário semanal e conteúdo oficial
+dos marcos seguem a confirmar. A distribuição de atividades é uma proposta.
+
+Esta correção não implementa SPI, RAM, PLL, modos de operação, integração,
+UPF ou otimizações. Não houve nova síntese, STA, análise física de CDC ou
+medição de potência. Lint e simulação não demonstram timing físico nem
+aceite humano. O Block Guide e a revisão confidencial não integram a entrega.
+
+Entrega destinada a um commit local na `develop`, com os fontes e documentos
+listados na seção 3. Sem push, merge ou tag. Aprovação do professor e revisão
+do parceiro dependem de registros reais posteriores.
