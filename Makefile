@@ -71,7 +71,26 @@ lint-aes-transforms: check-tools
 	$(VERILATOR) --lint-only -Wall --top-module minisoc_aes_shift_rows $(AES_PKG) rtl/minisoc_aes/minisoc_aes_shift_rows.sv
 
 test-aes: test-aes-transforms test-aes-dp test-aes-key test-aes-core
-regression: smoke test-aes
+regression-aes: smoke test-aes
+regression: regression-aes test-spi test-spi-cdc
+
+SPI_COMMON := rtl/minisoc_spi/minisoc_reset_sync.sv rtl/minisoc_spi/minisoc_cdc_mailbox.sv
+SPI_RTL := $(SPI_COMMON) rtl/minisoc_spi/minisoc_spi_rx.sv rtl/minisoc_spi/minisoc_spi.sv
+SPI_CDC_RTL := $(SPI_COMMON) rtl/minisoc_spi/minisoc_aes_cdc.sv
+.PHONY: regression-aes lint-spi lint-spi-cdc test-spi test-spi-cdc synth-spi
+lint-spi: check-tools
+	$(VERILATOR) --lint-only -Wall --top-module minisoc_spi $(SPI_RTL)
+lint-spi-cdc: check-tools
+	$(VERILATOR) --lint-only -Wall --top-module minisoc_aes_cdc $(SPI_CDC_RTL)
+test-spi: lint-spi | build
+	$(IVERILOG) -g2012 -Wall -s minisoc_spi_tb -o build/spi.vvp $(SPI_RTL) tb/minisoc_spi_tb.sv
+	$(VVP) build/spi.vvp
+test-spi-cdc: lint-spi-cdc | build
+	$(IVERILOG) -g2012 -Wall -s minisoc_spi_cdc_tb -o build/spi_cdc.vvp $(SPI_CDC_RTL) tb/minisoc_spi_cdc_tb.sv
+	$(VVP) build/spi_cdc.vvp
+synth-spi: check-synth-tools | build
+	$(YOSYS) -m slang -Q -T -l build/spi_synth.log -s scripts/synth_spi.ys
+	$(YOSYS) -m slang -Q -T -l build/spi_cdc_synth.log -s scripts/synth_spi_cdc.ys
 
 # Yosys/slang opcional; nao e dependencia de smoke/test-aes.
 check-synth-tools:
@@ -89,3 +108,4 @@ synth-aes: synth-aes-dp synth-aes-key synth-aes-core
 # Nao execute clean e smoke como alvos concorrentes; use comandos separados.
 clean:
 	rm -f build/smoke.vvp build/aes_transforms.vvp build/aes_dp.vvp build/aes_key.vvp build/aes_core.vvp
+	rm -f build/spi.vvp build/spi_cdc.vvp

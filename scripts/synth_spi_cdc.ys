@@ -1,0 +1,4 @@
+read_slang --top minisoc_aes_cdc rtl/minisoc_spi/minisoc_reset_sync.sv rtl/minisoc_spi/minisoc_cdc_mailbox.sv rtl/minisoc_spi/minisoc_aes_cdc.sv
+synth -top minisoc_aes_cdc -noabc
+check -assert
+stat

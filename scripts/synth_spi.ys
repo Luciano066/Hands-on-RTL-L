@@ -1,0 +1,5 @@
+# Generic synthesis; no PDK, STA or physical CDC verification.
+read_slang --top minisoc_spi rtl/minisoc_spi/minisoc_reset_sync.sv rtl/minisoc_spi/minisoc_spi_rx.sv rtl/minisoc_spi/minisoc_spi.sv
+synth -top minisoc_spi -noabc
+check -assert
+stat
