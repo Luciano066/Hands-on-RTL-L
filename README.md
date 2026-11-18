@@ -1,4 +1,4 @@
-# MiniSoC AES — arquitetura, datapath e núcleo sequencial
+# MiniSoC AES — AES-128, periférico SPI e CDC
 
 A Semana 1 validou o ambiente com uma XOR. A Semana 2 recebeu uma
 [arquitetura v1.1](docs/architecture/arquitetura_v1.1.md) revisada após leitura
@@ -7,6 +7,39 @@ A Semana 3 implementa transformações e rodada combinacional AES-128
 forward/inverse, com testes autochecking. A Semana 4 acrescenta expansão de
 chave e núcleo sequencial de bloco único, testados em ambos os sentidos.
 O SoC integrado ainda não existe; aceite do instrutor permanece pendente.
+
+A Semana 5 acrescenta o periférico SPI Mode 0, banco always-on e adaptador
+isolado de snapshots clk↔sys_clk. Em 18/11/2026, lint/regressão/síntese
+genérica passaram; **o protocolo detalhado D21–D24 é provisório e a Semana 5
+não está aprovada**. Veja o [relatório](docs/reports/semana_05.md), o
+[contrato interno](docs/architecture/spi_semana_05.md) e a
+[defesa com 40 perguntas](docs/reports/semana_05_defesa.md).
+
+## Semana 5 — executar e conhecer os limites
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/validate_week05.ps1 -Synthesis
+```
+
+Executa limpeza dos binários conhecidos, lint, todas as suítes e síntese
+genérica SPI/CDC/AES, preservando logs em build e códigos de erro. Não baixa
+ferramentas nem altera política global. Sem `-Synthesis`, Yosys é dispensável.
+Somente Semana 5: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+scripts/run_spi_tests.ps1`; acrescentar `-FullRegression`/`-Synthesis` conforme
+necessário. Com ferramentas no PATH: `make -j4 regression`.
+
+Resultado final: **24.670 checks SPI em 604 frames + 514 checks CDC**, além
+dos **8.655 checks AES anteriores e quatro XOR**. Lint Verilator -Wall e
+compilação Icarus sem warnings. Cinco sínteses genéricas com zero problemas,
+sem latches; não comprovam CDC físico, timing a 25 MHz/2 GHz ou potência.
+
+Para reproduzir o protocolo **provisório**, fornecer duas subidas SCLK com
+CS alto após reset e manter CS alto por pelo menos 12 ciclos ativos de clk
+entre frames. Read usa solicitação e NOP de escrita 0x3F; MISO retorna
+`{8'h00, DATA[31:0]}`. Um slot retém o comando até ack; excesso com clk parado
+é descartado e gera diagnóstico interno. P14/P20–P25 seguem abertas; esses
+detalhes não constituem um driver oficialmente aprovado. O adaptador de
+snapshots foi testado isoladamente, sem integração fictícia com AES/PLL/RAM.
 
 Em **30/10/2026**, o desafio obrigatório acrescenta três módulos
 combinacionais com os nomes `minisoc_aes_sbox`, `minisoc_aes_sub_bytes` e
@@ -77,12 +110,15 @@ e o quadro de acompanhamento estão no
 - [Semana 3: implementação e testes reais](docs/reports/semana_03.md).
 - [Semana 4: expansão, controle e evidências](docs/reports/semana_04.md).
 - [Contrato interno do núcleo sequencial](docs/architecture/aes_core_semana_04.md).
+- [Semana 5: SPI, banco, CDC e resultados](docs/reports/semana_05.md).
+- [Contrato provisório SPI/CDC D21–D24](docs/architecture/spi_semana_05.md).
 - [Backlog](BACKLOG.md).
 
 O contrato revisado prevê AES-128 cipher/inverse, seis modos, 1..256 blocos
 em RAM 1024 x 32 in-place; SPI Mode 0 com frames de 40 bits configura/monitora
-o sistema. MEMORY DATA transfere os blocos. PLL, memória, SPI, modos e
-engine integrado `minisoc_aes_top` permanecem para implementação posterior.
+o sistema. MEMORY DATA transfere os blocos. O periférico SPI e adaptador CDC
+estão implementados sob D21–D24; PLL, memória, modos e engine integrado
+`minisoc_aes_top` permanecem para implementação posterior.
 `minisoc_aes_core` é o auxiliar sequencial de um bloco, com a interface da
 Semana 4; não altera as portas oficiais do MiniSoC.
 
@@ -94,7 +130,8 @@ e a revisão técnica recebidos não integram o repositório.
 ## Núcleo sequencial e regressão completa
 
 Com o toolchain ativado, `make -j4 regression` executa XOR, transformações,
-datapath, Key Expansion e core. Em 30/10 foram observadas **8.655 verificações AES PASS**,
+datapath, Key Expansion, core e as duas suítes da Semana 5. O alvo
+`regression-aes` mantém somente a composição anterior. Em 30/10 foram observadas **8.655 verificações AES PASS**,
 além dos quatro casos XOR, sem warnings. Key Expansion: 535 checks e
 22 chaves oficiais; core: 5.128 checks, 52 operações e 42 cortes por reset.
 Latências locais medidas: expansão 10 ciclos; core 21 ciclos, nos dois sentidos.
@@ -220,6 +257,7 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 |   |-- architecture/arquitetura_v1.0.md
 |   |-- architecture/arquitetura_v1.1.md
 |   |-- architecture/aes_core_semana_04.md
+|   |-- architecture/spi_semana_05.md
 |   |-- architecture/decisoes_semana_02.md
 |   |-- reports/
 |       |-- semana_01.md
@@ -234,12 +272,16 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 |       |-- semana_02_retomada.md
 |       |-- semana_03.md
 |       |-- semana_04.md
+|       |-- semana_05.md / semana_05_defesa.md
 |-- rtl/minisoc_aes/{aes_transforms_pkg.sv,minisoc_aes_dp.sv}
 |-- rtl/minisoc_aes/{minisoc_aes_sbox.sv,minisoc_aes_sub_bytes.sv,minisoc_aes_shift_rows.sv}
 |-- rtl/minisoc_aes/{minisoc_aes_key_exp.sv,minisoc_aes_core.sv}
+|-- rtl/minisoc_spi/{minisoc_spi.sv,minisoc_spi_rx.sv,minisoc_reset_sync.sv}
+|-- rtl/minisoc_spi/{minisoc_cdc_mailbox.sv,minisoc_aes_cdc.sv}
 |-- tb/minisoc_aes_dp_tb.sv
 |-- tb/minisoc_aes_transforms_tb.sv
 |-- tb/{minisoc_aes_key_exp_tb.sv,minisoc_aes_core_tb.sv}
+|-- tb/{minisoc_spi_tb.sv,minisoc_spi_cdc_tb.sv}
 |-- tb/vectors/README.md
 |-- rtl/smoke_top.sv
 |-- tb/tb_smoke_top.sv
@@ -253,6 +295,8 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 |   |-- run_aes_dp.ps1
 |   |-- synth_aes_dp.ys
 |   |-- run_aes_tests.ps1 / run_aes_tests.sh
+|   |-- run_spi_tests.ps1 / validate_week05.ps1
+|   |-- synth_spi.ys / synth_spi_cdc.ys
 |   |-- synth_aes_key.ys / synth_aes_core.ys
 |   |-- activate_tools.ps1
 |   |-- bootstrap_windows.ps1
@@ -280,10 +324,14 @@ Essa receita Linux não foi executada nesta sessão Windows. Versões podem dife
 | `make test-aes-key` / `make test-aes-core` | Lint, compilação e TBs independentes dos módulos sequenciais |
 | `make lint-aes-key` / `make lint-aes-core` | Lint Verilator dos novos módulos e suas dependências |
 | `make test-aes` | Quatro suítes AES: transformações obrigatórias, datapath, chaves e core |
-| `make regression` | Smoke XOR e todas as suites AES, seguro para make -j4 |
+| `make regression-aes` | Smoke XOR e todas as suítes AES anteriores |
+| `make regression` | Regressão anterior + SPI e CDC, seguro para make -j4 |
+| `make lint-spi` / `make lint-spi-cdc` | Verilator -Wall no periférico e adaptador de snapshots |
+| `make test-spi` / `make test-spi-cdc` | Lint, compilação e TBs autochecking da Semana 5 |
+| `make synth-spi` | Duas sínteses genéricas: periférico SPI e adaptador CDC |
 | `make synth-aes` | Síntese genérica dp/key/core; alvos individuais synth-aes-key e synth-aes-core |
 | `make versions` | Mostra versões reais das ferramentas |
-| `make clean` | Remove somente os cinco binários .vvp conhecidos; preserva fontes, ferramentas e logs |
+| `make clean` | Remove somente os sete binários .vvp conhecidos; preserva fontes, ferramentas e logs |
 
 As variáveis `VERILATOR`, `IVERILOG`, `VVP` e `YOSYS` permitem escolher executáveis no PATH. Para ferramentas em caminhos com espaços, prefira ativar o diretório no PATH e usar o nome do executável.
 

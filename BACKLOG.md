@@ -1,6 +1,6 @@
 # Backlog — MiniSoC AES
 
-Atualização: 30/10/2026. [x] indica execução/evidência técnica; aceite humano
+Atualização: 18/11/2026. [x] indica execução/evidência técnica; aceite humano
 é listado separadamente. Fonte funcional: Block Guide v1.0.0 local confidencial.
 Contrato atual: [arquitetura v1.1](docs/architecture/arquitetura_v1.1.md).
 
@@ -133,13 +133,35 @@ requisitos no guia não encerra a Semana 2.
 bloco. DONE pulsado e START ocupado ignorado são escolhas locais, sem fechar
 políticas oficiais de status/concorrência do MiniSoC.
 
-## Pendências herdadas — SPI, controle e CDC (antiga Semana 5)
+## Semana 5 — SPI, controle e CDC implementados/testados; aceite pendente
 
-- [ ] Resolver P14/P21/P22/P24/P25 com instrutor e DV antes de fixar o protocolo detalhado.
-- [ ] Implementar minisoc_spi.sv: Mode 0, frame de 40 bits, read em duas transações.
-- [ ] Implementar mapa oficial, banco always-on e transporte de frame por evento/toggle.
-- [ ] Testar abort/back-to-back/reset/clocks pausados e ausência de commit duplicado.
-- [ ] Implementar snapshots de configuração/status com verificação de coerência CDC.
+Evidências: [relatório](docs/reports/semana_05.md),
+[contrato D21–D24](docs/architecture/spi_semana_05.md) e
+[defesa técnica](docs/reports/semana_05_defesa.md). A numeração identifica
+esta entrega técnica e não altera as datas confirmadas do cronograma.
+
+- [x] Auditar develop/5c3a01b limpa, comparar main/histórico locais, procurar patch e registrar hashes de base.
+- [x] Criar feat/w05-spi-control-cdc sem descartar alterações; executar regressão anterior antes de editar.
+- [x] Implementar minisoc_spi.sv: Mode 0, MSB-first, 40 bits e read em duas transações sob D22.
+- [x] Implementar mapa oficial, banco always-on, START comando, DONE persistente e NUM_BLOCKS de 32 bits.
+- [x] Implementar slot retido, evento/ack, rejeição de 41+ bits e overrun sem sobrescrita.
+- [x] Validar abort, back-to-back no intervalo declarado, períodos/fases variáveis e clocks pausados.
+- [x] Validar 41 cortes de recepção, nove fases clk, reset com SCLK alto/parado e ausência de commits fantasmas.
+- [x] Implementar/testar adaptador isolado de snapshots de configuração/status com valid/ready e reset coordenado.
+- [x] Executar 24.670 checks SPI/604 frames/11 consumos, 514 checks CDC e quatro mutações detectadas.
+- [x] Preservar regressão anterior: 8.655 checks AES + quatro XOR; lint e compilação finais sem warnings.
+- [x] Executar síntese genérica SPI/CDC/AES dp/key/core com zero problemas, sem latches; sem alegação física.
+- [x] Acrescentar alvos Make, scripts Windows/logs, relatório e defesa de 40 perguntas.
+- [x] Confirmar branches pelo conector GitHub: main=46eb75d, develop=5c3a01b, divergência 2/2; Git nativo sem conectividade.
+- [ ] Resolver P14/P21/P22/P24/P25 com instrutor/DV antes de fixar retorno MISO, gaps, reset e políticas oficiais.
+- [ ] Resolver P20/P23 e integrar snapshots ao engine real/PLL; adaptador isolado não encerra integração.
+- [ ] Revisar CDC/RDC físico, max delay/skew, reset de framing/IO timing e MTBF com tecnologia/restrições reais.
+- [ ] Apresentar evidências, registrar avaliação e obter aceite do instrutor; **Semana 5 não aprovada**.
+
+Limites provisórios: duas subidas SCLK com CS alto após reset; CS alto por
+12 ciclos ativos de clk entre frames; um slot e descarte diagnosticado de
+excesso; MISO={00,DATA} no NOP de escrita. P14/P20–P25 continuam OPEN. RAM,
+PLL, modos e top-level não foram implementados por esta entrega.
 
 ## Pendências herdadas — memória, PLL e integração (antiga Semana 6)
 
