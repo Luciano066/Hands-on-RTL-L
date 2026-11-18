@@ -8,12 +8,12 @@ Usar em conjunto com o [relatório](semana_05.md), o
 
 ## Roteiro de demonstração
 
-Começar pelo caminho completo de um comando: mestre seleciona CS, envia
-header/dado, receptor acumula 40 amostras, slot retém o candidato, evento
-cruza para clk, CS alto é qualificado e o banco aplica uma única escrita.
-Mostrar depois read seguido de NOP e, por último, o snapshot congelado no
-START e o adaptador CDC isolado. Não apresentar o periférico como engine AES
-integrado ou o TB como demonstração de timing físico.
+1. Escrever KEY0 e acompanhar o frame desde CS baixo até a atualização do
+   banco em `clk`. Observar a diferença entre a 40ª amostra e o commit.
+2. Ler KEY0 com uma solicitação seguida de NOP. Identificar a nona subida de
+   SCLK, quando o mestre amostra o primeiro bit do dado em MISO.
+3. Acionar START e acompanhar o snapshot enquanto o consumidor mantém
+   `ready` baixo. Usar o TB do adaptador para mostrar a travessia até `sys_clk`.
 
 Executar na raiz, com o toolchain portátil existente:
 
@@ -21,33 +21,30 @@ Executar na raiz, com o toolchain portátil existente:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/validate_week05.ps1 -Synthesis
 ```
 
-Resultados: 24.670 checks SPI/604 frames/11 consumos de configuração, 514
-checks CDC, 8.655 checks AES anteriores e quatro XOR. Cinco sínteses genéricas
-com zero problemas, sem latches e lint final sem warnings. Os checks SPI
-incluem milhares de verificações de estabilidade por borda; não equivalem
-a milhares de operações AES. Logs completos ficam em build, fora do Git.
+Os 604 frames do TB SPI somaram 24.670 verificações, incluindo estabilidade
+por borda, e 11 consumos de configuração. O TB CDC passou em 514 verificações.
+A regressão anterior passou em 8.655 verificações AES e quatro casos XOR.
+O lint terminou sem warnings e as cinco sínteses genéricas passaram no
+`check -assert`, sem latches. Os logs ficam em `build/`.
 
 ## Perguntas e respostas para a sabatina
 
 ### 1. O que é SPI e por que foi escolhido para este projeto?
 
-SPI é uma interface serial síncrona em que o mestre fornece o clock e
-seleciona o escravo por CS. MOSI leva dados ao escravo e MISO leva dados ao
-mestre; os sentidos podem operar ao mesmo tempo. Aqui, a escolha é requisito
-do projeto para configurar e consultar o acelerador com poucos pinos. KEY,
-IV e controles trafegam por SPI; blocos AES trafegam pela futura interface
-de memória. Por exemplo, escrever KEY0 exige um frame de configuração, não
-uma janela DATA_IN inventada. O módulo implementado é escravo e não gera SCLK.
+SPI é uma interface serial síncrona. O mestre fornece SCLK, seleciona o
+periférico por CS e envia comandos em MOSI. O periférico pode devolver dados
+em MISO durante o mesmo frame. No MiniSoC, quatro sinais bastam para acessar
+chave, IV, controles e status. Os blocos a cifrar ou decifrar ficam a cargo
+da interface de memória prevista na arquitetura.
 
 ### 2. Qual a diferença entre CPOL e CPHA?
 
-CPOL define o nível ocioso do clock. CPHA define qual das duas bordas de
-cada período é usada para amostragem, em relação à primeira borda após a
-seleção. No Mode 0, CPOL=0 e CPHA=0: SCLK repousa baixo; a primeira subida
-amostra o primeiro bit e a descida permite preparar o próximo. Confundir
-essas funções deslocaria os dados em meia borda ou uma posição inteira.
-Neste RTL, recepção usa `posedge spi_sclk` e transmissão usa `negedge
-spi_sclk`, refletindo diretamente as duas responsabilidades.
+- CPOL define o nível de SCLK em repouso. Com CPOL=0, o clock fica baixo.
+- CPHA indica se a amostragem ocorre na primeira ou na segunda borda de
+  cada período. Com CPHA=0, ela ocorre na primeira.
+
+Com ambos em zero (Mode 0), a primeira borda é de subida. O RTL recebe com
+`posedge spi_sclk` e prepara o bit seguinte de MISO com `negedge spi_sclk`.
 
 ### 3. Como funciona uma transferência Mode 0 na implementação?
 
@@ -61,13 +58,10 @@ de IO timing e não são demonstrados por delays ideais de simulação.
 
 ### 4. Por que o frame tem 40 bits?
 
-O contrato vigente contém um bit RWb, seis bits ADDR, um bit RSV e 32 bits
-DATA: 1+6+1+32=40. O header ocupa as oito primeiras amostras, seguido pelos
-32 bits do dado, todos MSB-first. ADDR é índice de registrador; KEY1 fica
-em 0x01, não em 0x04 como num barramento endereçado a bytes. Por exemplo,
-escrever 0x11223344 em KEY0 produz o vetor de 40 bits `0x0011223344`.
-Protocolos históricos de 48 bits foram superados pela v1.1 e não orientam
-o receptor novo.
+O cabeçalho tem oito bits (`RWb`, `ADDR[5:0]`, `RSV`) e precede os 32 bits
+de `DATA`. A transmissão é MSB-first. Com `RWb=0`, `ADDR=0` e `RSV=0`, o
+mestre escreve `0x11223344` em KEY0 enviando `0x0011223344`. Como `ADDR`
+é um índice de registrador, KEY1 vem logo depois, no endereço `0x01`.
 
 ### 5. Como o receptor garante a ordem MSB-first e inclui o último bit?
 
@@ -82,23 +76,18 @@ palavras.
 
 ### 6. Por que o banco não aplica o comando imediatamente na 40ª subida?
 
-Se aplicasse imediatamente, um frame de 41 bits já teria produzido efeito
-antes de ser classificado como longo. O receptor publica um candidato na
-40ª subida, mas o destino espera CS alto qualificado. A 41ª subida marca
-long_q, retido junto ao candidato. Só então o destino decide entre comando
-válido e rejeição. Isso permite rejeitar todo o frame excessivo sem rollback.
-É uma escolha D22 explícita: acrescenta latência e um intervalo mínimo de
-CS alto, que ainda depende da definição oficial de P14/P22.
+Na 40ª subida, o receptor ainda pode receber outro bit. Por isso ele retém
+os 40 bits e o circuito em `clk` espera a confirmação de CS alto. Se houver
+uma 41ª subida com CS baixo, `long_q` marca o frame para rejeição. A espera
+evita aplicar uma escrita que precisaria ser desfeita. O intervalo mínimo
+de CS alto adotado em D22 continua sujeito a P14/P22.
 
 ### 7. O que ocorre com frames truncados e CS desativado no meio?
 
-Frames de zero a 39 amostras não alcançam a condição de publicação. CS alto
-limpa apenas contador/shift de framing, sem tocar no banco ou no mailbox
-retido. Portanto nenhum prefixo pode virar uma escrita parcial. O TB envia
-todos os comprimentos de 0 a 39 e depois lê KEY0 para confirmar que o padrão
-anterior permanece. Não se exige um pulso de rejeição para cada truncamento:
-sem candidato, não há evento em clk. A garantia relevante é ausência de
-efeito no banco e recuperação na transação seguinte sob D21/D22.
+Ao subir antes da 40ª amostra, CS reinicia o contador e o registrador de
+deslocamento. O toggle de publicação permanece no valor anterior, de modo
+que o banco segue sem um comando novo. O TB percorre comprimentos de 0 a 39
+bits e lê KEY0 para confirmar que o conteúdo anterior foi preservado.
 
 ### 8. Por que o contador satura em 41, em vez de voltar para zero?
 
@@ -112,54 +101,44 @@ um NOP longo não confirma consumo da resposta no banco.
 
 ### 9. Como funciona a leitura em duas transações?
 
-O primeiro frame envia RWb=1 e o índice desejado. Quando ele é aceito em
-clk, o banco captura o valor em response_q e mantém pending. O segundo
-frame é o NOP de escrita 0x3F. Pela escolha provisória D22, MISO devolve
-o vetor `{8'h00, DATA}`: oito zeros, depois 32 bits a partir da nona amostra.
-O NOP completo confirma o consumo ao retornar para clk. O formato oficial
-de MISO ainda é P14; a defesa deve diferenciar a implementação testada da
-especificação ainda incompleta.
+No primeiro frame, `RWb=1` seleciona a leitura de `ADDR`. O banco guarda
+o valor em `response_q`. No segundo, o mestre envia um NOP de escrita no
+endereço `0x3F` e recebe `{8'h00, DATA}` em MISO. Pela regra provisória D22,
+o dado começa na 9ª amostra e o NOP completo confirma o consumo em `clk`.
+O formato definitivo de MISO continua aberto em P14.
 
 ### 10. Como o primeiro bit de resposta é preparado com SCLK inicialmente parado?
 
-O primeiro bit transmitido é zero porque o prefixo D22 tem oito zeros.
-Assim não é necessário carregar um MSB diferente de zero na borda de CS.
-Enquanto chegam os oito bits do header NOP, pending atravessa três FF no
-domínio SCLK. Na descida após a oitava amostra, o header 0x7e é reconhecido
-e response_q[31] é colocado em MISO, antes da nona subida. O restante é
-deslocado nas descidas seguintes. Isso resolve o caso local de clock pausado,
-mas não autoriza afirmar que P14 aprovou esse prefixo ou essa posição.
+MISO começa em zero. Os oito clocks do cabeçalho dão tempo para o sinal de
+resposta pendente atravessar três flip-flops em SCLK. Se o cabeçalho for
+`0x7e` e houver resposta, a descida após a 8ª amostra coloca
+`response_q[31]` em MISO. O mestre lê esse bit na 9ª subida e os restantes
+nas subidas seguintes. O prefixo de zeros e a posição do dado pertencem a D22.
 
 ### 11. O que acontece se uma resposta estiver pendente e chegar outro read?
 
-Na política D22, o segundo read é rejeitado e a resposta anterior permanece.
-Isso evita sobrescrever um dado que o mestre ainda não recebeu. Escritas
-comuns podem ocorrer e mudar o banco, porém não mudam o snapshot já retido.
-O TB solicita KEY0, escreve outro valor em KEY0, solicita KEY1 e em seguida
-envia NOP: deve receber o valor antigo de KEY0. Depois confirma a escrita
-nova numa leitura separada. Essa política não é requisito oficial; P14 deve
-especificar se o contrato final terá rejeição, fila ou outra regra.
+Considere a sequência do TB. O mestre solicita KEY0, escreve um valor novo
+em KEY0, pede KEY1 e envia NOP. D22 rejeita o pedido de KEY1 e o NOP devolve
+KEY0 como ele estava no instante da primeira leitura. Uma solicitação
+posterior a KEY0 devolve a palavra atualizada. O tratamento definitivo de
+leituras sobrepostas continua em P14.
 
 ### 12. Uma leitura truncada consome a resposta?
 
-Não na implementação D22. Carregar bits no serializador não é o mesmo que
-confirmar o consumo. O banco só limpa pending ao receber um NOP de escrita
-completo, com RSV=0, validado pelo receptor. Um NOP parcial ou longo pode
-mostrar alguns bits em MISO, mas não altera pending. O mestre pode repetir
-um NOP correto e obter o mesmo snapshot. O TB faz exatamente essa sequência
-com NOP de 18 e 44 bits antes do NOP válido, prevenindo um bug comum de
-ack antecipado durante o header.
+Em D22, o banco libera a resposta somente após validar um NOP de escrita
+com 40 bits e `RSV=0`. O TB envia NOPs de 18 e 44 bits antes de um NOP
+válido. Embora o mestre possa ver bits da resposta nas tentativas
+anteriores, o último NOP ainda precisa devolver o dado completo.
 
 ### 13. Qual a finalidade de cada conjunto de registradores?
 
-KEY0–3 compõem a chave de 128 bits. IV0–3 guardam o vetor inicial de 128
-bits. COUNTER_HI/LO guardam o contador de 64 bits. NUM_BLOCKS informa a
-quantidade de blocos; AES_CONTROL contém START, direção e modo. AES_STATUS
-expõe ocupação, conclusão, erro e progresso. VERSION é uma constante ainda
-sem número oficial. SYSTEM_CONTROL armazena seleção de memória e controles
-PLL; SYSTEM_STATUS informa lock. NOP participa do retorno de leitura.
-O banco de registradores existe; RAM, PLL e engine que usarão esses campos
-ainda não estão conectados.
+| Grupo | Função |
+|---|---|
+| KEY0–3, IV0–3 | Chave e vetor inicial, ambos de 128 bits |
+| COUNTER_HI/LO, NUM_BLOCKS | Contador de 64 bits e quantidade de blocos |
+| AES_CONTROL, AES_STATUS | START, direção e modo. Ocupação, conclusão, erro e progresso |
+| SYSTEM_CONTROL, SYSTEM_STATUS | Seleção da memória, ajustes da PLL e indicação de lock para a futura integração |
+| VERSION, NOP | Identificação com valor oficial em aberto e comando de retorno de leitura |
 
 ### 14. Como se reconstituem KEY, IV e COUNTER sem inverter palavras?
 
@@ -173,23 +152,20 @@ isolados de palavras não bastariam para detectar essa inversão na montagem.
 
 ### 15. Por que NUM_BLOCKS fica com 32 bits se o máximo é 256?
 
-Porque a validação precisa observar o valor escrito inteiro antes de
-reduzi-lo. Se 513 fosse truncado a nove bits, viraria 1 e poderia ser aceito;
-0x00010001 também pode virar 1. O banco mantém 32 bits e compara zero e
-maior que 256 no START. Só um futuro engine, depois dessa validação, poderá
-usar contadores internos menores. Nove bits representam 256; oito bits não
-representam esse limite. O TB verifica 0/1/256/257/513/0x00010001 e uma
-mutação com comparação truncada falhou, demonstrando a relevância do caso.
+Truncar `513` ou `0x00010001` para nove bits produziria `1`. Por isso o
+banco compara os 32 bits escritos com os limites de 1 a 256 na hora do
+START. Depois dessa validação, nove bits bastam para o contador do futuro
+engine, inclusive para representar 256. O TB verifica os dois casos que
+virariam `1`, além de 0, 1, 256 e 257. O teste detectou a variante de RTL
+com a comparação truncada.
 
 ### 16. O módulo implementa os seis modos AES?
 
-Implementa a codificação e validação dos seis modos no banco: ECB=0, CBC=1,
-PCBC=2, CFB=3, OFB=4 e CTR=5. Códigos 6 e 7 produzem ERROR sem despacho.
-O algoritmo de encadeamento e o processamento in-place não fazem parte do
-periférico SPI. Eles exigem engine, RAM e políticas de feedback/latência.
-Aceitar MODE=3 num snapshot não demonstra CFB funcionando. O TB confere
-que cada código válido produz o campo correto no snapshot, e que os
-reservados não produzem consumo de configuração. P15–P17 continuam abertas.
+Nesta etapa o banco valida `MODE` e copia o código aceito para o snapshot.
+Os códigos 0 a 5 representam, na ordem, ECB, CBC, PCBC, CFB, OFB e CTR. Os
+códigos 6 e 7 geram `ERROR` e bloqueiam o despacho. O TB verifica a
+codificação e a rejeição. O processamento dos blocos, incluindo encadeamento
+e acesso à RAM, fica no futuro engine, com P15–P17 ainda abertas.
 
 ### 17. Por que START é comando e não um bit armazenado em nível alto?
 
@@ -203,101 +179,92 @@ e verifica que comandos ocupados não enfileiram uma segunda operação.
 
 ### 18. Qual a diferença entre o DONE do core da Semana 4 e o status SPI?
 
-`done_o` do core é um pulso local de um ciclo. Software consultando SPI
-pode demorar muitos ciclos e perder esse pulso. Por isso AES_STATUS.DONE
-é persistente: permanece 1 depois da conclusão e só limpa em reset ou novo
-START válido aceito. O banco recebe snapshots coerentes de status e acumula
-DONE/ERROR, em vez de ligar um pulso assíncrono diretamente ao readback.
-Os testes leem DONE repetidamente, rejeitam um START inválido e confirmam
-que a conclusão anterior permanece. O adaptador ainda precisa ser conectado
-ao futuro engine real.
+`done_o` dura um ciclo do core. Entre duas consultas SPI podem passar muitos
+ciclos, então `AES_STATUS.DONE` guarda a indicação de conclusão. Ele volta a
+zero no reset ou quando um novo START válido é aceito. O banco atualiza
+DONE e ERROR a partir do snapshot de status. O TB lê DONE mais de uma vez
+e confirma que até um START inválido preserva o valor anterior.
 
 ### 19. Quais políticas de erro já são requisito e quais são provisórias?
 
-É confirmado que modos reservados e N fora de 1..256 causam ERROR sem
-processamento normal. A política complementar é D24: ERROR sticky até reset
-ou START válido, preservação de DONE/contagem em START inválido, rejeição
-interna de RO/RSV/endereço inválido e START ocupado sem fila. Não há
-registradores CLR_ERROR/CLR_DONE novos. Reservados de controles são ignorados
-e lidos como zero, também provisoriamente. A implementação torna essas
-escolhas testáveis, mas P24/P25 só podem ser encerradas após acordo explícito
-com instrutor/DV.
+Modo reservado ou `NUM_BLOCKS` fora de 1 a 256 deve gerar ERROR e impedir o
+despacho. As regras abaixo são provisórias (D24, pendências P24/P25):
+
+- ERROR persiste até reset ou START válido. Um START inválido preserva DONE
+  e a contagem anterior.
+- O banco sinaliza rejeição internamente para escrita em registrador de
+  leitura, `RSV` diferente de zero ou endereço inválido. START durante BUSY
+  é descartado sem entrar em fila.
+- O banco ignora os bits reservados dos controles na escrita e devolve zero
+  para eles na leitura.
 
 ### 20. O que é CDC e onde ele aparece nesta etapa?
 
-CDC é a transferência de informação entre domínios de clock sem uma borda
-comum confiável para lançamento e captura. O mestre controla SCLK; o banco
-usa clk; o futuro engine usará sys_clk. Mesmo clocks de frequências conhecidas
-podem ter fase variável ou parar. Nesta etapa existem o transporte do frame
-SCLK→clk, a resposta clk→SCLK e o adaptador bidirecional para sys_clk. Dados
-e eventos têm tratamentos diferentes: eventos usam sincronizadores, dados
-usam retenção e captura coerente. Testes com clocks pausados verificam o
-protocolo, sem modelar analogicamente metastabilidade.
+CDC é a passagem de dados entre domínios de clock. Aqui, o receptor usa o
+SCLK do mestre e o banco usa `clk`. A relação de fase entre eles é
+desconhecida, e SCLK pode parar entre frames. O comando cruza de SCLK para
+`clk` e a resposta faz o caminho inverso. O adaptador também transporta
+configuração e status entre `clk` e o futuro `sys_clk`. Em cada direção,
+os sinais de controle passam por sincronizadores enquanto o dado fica
+retido para a captura de uma só vez.
 
 ### 21. Por que dois flip-flops não bastam para um barramento multibit?
 
-Dois FF em série reduzem a probabilidade de uma metastabilidade de um bit
-se propagar, mas não fazem todos os bits do barramento representarem o mesmo
-instante. Ao trocar 0x00FF por 0x0100, caminhos diferentes podem produzir uma
-combinação intermediária que nunca foi enviada. No projeto, o vetor fica
-congelado antes de publicar req. O destino observa req sincronizado, aguarda
-guarda e captura o vetor inteiro, que só poderá mudar após ack. A estabilidade
-tem de ser acompanhada de restrições físicas de atraso/skew; o handshake
-RTL sozinho não resolve qualquer atraso arbitrário de roteamento.
+Ao passar de `0x00FF` para `0x0100`, caminhos com atrasos diferentes podem
+produzir uma palavra intermediária que a origem nunca enviou. Dois
+flip-flops por bit reduziriam o risco de propagação da metastabilidade,
+mas cada bit ainda poderia ser capturado em um ciclo diferente. A mailbox
+registra o vetor e alterna `req` na mesma borda. O destino sincroniza `req`,
+espera um ciclo de guarda e captura o vetor, que a origem retém até `ack`.
+A implementação física precisa de restrições de atraso e skew que garantam
+a chegada do vetor dentro dessa janela.
 
 ### 22. Como funciona o handshake por toggle da mailbox?
 
-Inicialmente req=ack=0 e o slot está livre. Na aceitação valid&&ready, a
-origem congela DATA e alterna req para 1. Dois FF levam req ao destino;
-ele reconhece a diferença, faz guarda, captura DATA e apresenta valid.
-Quando o consumidor aceita, ack passa para 1. Dois FF devolvem ack à origem,
-liberando o slot. A operação seguinte usa req=0, e assim por diante. Um
-toggle é um evento persistente, não um pulso estreito. A comparação com ack
-garante no máximo um evento em voo e impede reutilização prematura do vetor.
+1. Com `req=ack=0`, a origem tem um slot livre. Na borda em que `valid && ready`,
+   ela grava o dado em `hold_q` e alterna `req` para 1.
+2. O destino sincroniza `req` com dois flip-flops, detecta a diferença,
+   espera um ciclo de guarda e captura o vetor. `valid` fica alto até o consumo.
+3. No consumo, `ack` passa a 1. Depois de dois flip-flops na volta, a origem
+   vê `req=ack` novamente e libera o slot.
+
+Na próxima operação, `req` vai para 0. O novo valor fica estável mesmo que
+um dos clocks pare antes de concluir o handshake.
 
 ### 23. Por que um toggle sem ack pode perder comandos?
 
-Se a origem alternar 0→1→0 antes que o destino observe 1, o destino verá
-somente 0 e poderá concluir que nada aconteceu. Dois eventos se cancelam
-na representação por um bit. Por isso o receptor SPI só alterna req quando
-o ack sincronizado indica slot livre. Com clk parado, o primeiro frame fica
-retido e o segundo completo é descartado com overrun, sem uma segunda
-alternância. O TB verifica que o primeiro valor chega e o segundo não
-sobrescreve outro registrador. Isso demonstra uma capacidade limitada, não
-entrega ilimitada com clocks parados.
+Imagine duas mudanças, `0 → 1 → 0`, entre bordas do clock de destino. O
+destino pode observar `0` nas duas bordas e perder os dois eventos. No SPI,
+o `ack` sincronizado limita a origem a um frame pendente. O TB pausa `clk`,
+envia dois frames completos e retoma o clock. A primeira escrita precisa
+chegar intacta e a segunda deve gerar overrun.
 
 ### 24. Qual é a política de backpressure e qual seu limite?
 
-Na mailbox interna existe ready: o produtor deve manter valid/data até a
-aceitação e não pode assumir consumo sem handshake. Nos pinos SPI não existe
-ready oficial. D22 impõe CS alto por 12 ciclos em execução de clk e usa
-um slot; se o mestre ultrapassar a capacidade, o frame extra é descartado,
-com overrun interno persistente. Não há fila escondida nem garantia de
-receber infinitos frames durante pausa de clk. Para mudar essa capacidade,
-seria necessário acordar temporização, observabilidade do erro ou FIFO,
-preservando as portas oficiais e revisando P14/P22.
+A mailbox interna oferece `ready`. O produtor mantém `valid` e o dado até
+a aceitação. Na interface SPI, o mestre segue o intervalo de CS alto de D22
+e envia os frames sem sinal de retorno de capacidade. Se o slot ainda está
+ocupado na 40ª amostra, o periférico descarta o novo frame e mantém ativa
+a indicação interna de overrun. A capacidade e a forma de sinalizar o erro
+continuam em discussão em P14/P22.
 
 ### 25. Por que a implementação pede um intervalo com CS alto?
 
-O destino precisa observar o fim do frame, distinguir 40 de 41+ bits,
-capturar o vetor retido e aplicar o comando. Uma passagem muito curta de
-CS alto pode nem ser observada em clk. A margem local de 12 ciclos inclui
-sincronização, guarda, três observações altas e aplicação no banco. O TB
-envia 24 frames consecutivos usando esse intervalo. Não são 12 clocks SCLK,
-nem uma constante oficial: são ciclos ativos de clk. Se clk parar, esperar
-o mesmo tempo de parede não garante progresso. A especificação definitiva
-do intervalo depende de P14/P22.
+`clk` precisa observar CS alto para fechar o frame. A margem provisória de
+12 ciclos ativos de `clk` cobre a sincronização, a guarda, três observações
+de CS em nível alto e a aplicação do comando pelo banco. O TB usa esse
+intervalo em 24 frames consecutivos. Enquanto `clk` está parado, a lógica
+de qualificação fica parada também. O intervalo definitivo depende de
+P14/P22.
 
 ### 26. Como o projeto evita operações duplicadas?
 
-O destino compara req sincronizado com ack e só confirma uma vez por
-diferença. Não reprocessa um req já confirmado. O banco recebe frame_valid
-de um ciclo, e uma escrita START válida cria somente um snapshot retido.
-O consumidor do snapshot confirma uma única aceitação valid&&ready. O TB
-conta lançamentos, mantém ready baixo, altera o banco e tenta START ocupado:
-o snapshot não muda e só um consumo ocorre. Porém dois frames idênticos
-enviados quando o sistema está ocioso são dois comandos legítimos; não há
-ID de transação que permita deduplicar retransmissão de software.
+O destino emite `frame_valid` por um ciclo ao confirmar um frame íntegro.
+O `ack` encerra a transferência, e cada START aceito gera um snapshot que é
+consumido uma vez em `valid && ready`. O TB confirma um único consumo mesmo
+quando mantém `ready` baixo, altera o banco e tenta outro START durante
+BUSY. Se o software enviar dois frames idênticos quando o sistema está
+ocioso, o banco os trata como dois comandos distintos.
 
 ### 27. Como são preservadas configurações coerentes para o futuro AES?
 
@@ -322,14 +289,11 @@ a cada bloco; periodicidade e término antes de parar sys_clk são P23.
 
 ### 29. O que acontece se sys_clk parar com um status pendente?
 
-Se a origem já congelou o vetor e publicou req, o destino clk pode capturá-lo
-mesmo com sys_clk parado, porque o dado permanece estável. Entretanto o ack
-de consumo precisa de novas bordas em sys_clk para voltar ao produtor. O
-TB demonstra essa diferença: status chega ao destino enquanto a origem
-está parada, mas status_ready na origem só retorna após retomada do clock.
-O futuro controlador deve esperar a confirmação necessária antes de
-desabilitar o domínio. A existência da mailbox não implementa automaticamente
-a sequência segura de desligamento da PLL.
+Se `req` já mudou, `clk` pode capturar o vetor retido enquanto `sys_clk`
+está parado. No TB, o consumidor em `clk` recebe status nessa condição.
+O produtor só vê `status_ready` voltar quando `sys_clk` retoma e sincroniza
+o `ack`. Para desligar a PLL com segurança, o futuro controlador deve
+tratar essa etapa de confirmação na sequência de desligamento.
 
 ### 30. Como funcionam assert assíncrono e deassert sincronizado de reset?
 
@@ -344,14 +308,12 @@ AES ainda exigem projeto de integração, conforme P20.
 
 ### 31. Como é tratado reset com SCLK parado e o primeiro frame seguinte?
 
-O banco em clk reinicializa sem depender de SCLK e mantém PLL_ENABLE=1
-provisoriamente. A parte serial afirma reset de forma assíncrona e aguarda
-duas subidas locais para liberar. D21 exige duas subidas de preparação com
-CS alto antes do primeiro frame útil; o TB fornece essas bordas após pausar
-os clocks e aplicar reset. Sem essa preparação, o primeiro frame não tem
-aceitação garantida, porque pode começar enquanto o receptor está em reset.
-Isso deve ser dito na defesa: é uma solução local verificável para uma
-sequência de mestre ainda pendente em P21, não um contrato oficial presumido.
+O banco reinicializa em `clk` e coloca `PLL_ENABLE=1` pela política
+provisória. Para liberar a parte serial, o mestre fornece duas subidas de
+SCLK com CS alto antes de selecionar o primeiro frame útil. O TB aplica
+reset com os clocks parados e reproduz essa sequência. Selecionar antes
+dessas bordas pode deixar parte do primeiro frame sob reset. A sequência
+definitiva do mestre continua em P21.
 
 ### 32. Por que CS limpa o framing, mas não pode limpar todo o CDC?
 
@@ -377,47 +339,43 @@ controle lógico; RDC físico exige análise própria.
 
 ### 34. Como foi verificada a independência dos testbenches?
 
-O scoreboard do banco gera palavras esperadas fora do DUT e compara
-readbacks SPI. O vetor esperado de configuração vem dessas palavras, não
-de funções do RTL. O adaptador usa duas filas de transações independentes
-e compara conteúdo/ordem no consumo. Não usa package AES, registrador interno
-como valor esperado ou uma cópia da FSM como oráculo. Sondas internas são
-usadas para trace e alinhamento de concorrência, não para decidir o dado
-correto. Quatro mutações funcionais detectadas reforçam que os testes falham
-quando os comportamentos relevantes são alterados.
+O scoreboard SPI calcula as palavras esperadas a partir dos estímulos e
+compara tanto o readback quanto o snapshot de configuração. O TB do
+adaptador registra o esperado em duas filas independentes e compara
+conteúdo e ordem no consumo. As sondas internas servem para depuração e
+para alinhar eventos simultâneos. Quatro falhas deliberadas do RTL, entre
+elas a troca de palavras de KEY, foram detectadas pelos testes.
 
 ### 35. O que lint e síntese provaram, e quais problemas reais encontraram?
 
-Lint/elaboração checaram largura, uso de sinais, estruturas e conectividade.
-Inicialmente apareceram um bit não usado, constante excessiva no TB e
-diagnósticos de reset/sensibilidade. A síntese slang rejeitou o processo
-com dois controles assíncronos e condição composta; a forma final usa uma
-única rede de reset de framing. As correções foram revalidadas com Verilator
--Wall sem supressões, Icarus e Yosys. As cinco sínteses passaram no check
--assert, sem latches nas estatísticas. Isso não prova funcionamento em
-silício, equivalência pós-síntese, IO timing ou confiabilidade de CDC.
+O lint verificou larguras e uso de sinais, incluindo um bit sem uso e uma
+constante larga demais no TB. Na síntese, o frontend slang rejeitou um
+processo com dois controles assíncronos. O RTL final combina esses controles
+em uma única rede de reset para o enquadramento SPI. A revisão passou em
+Verilator `-Wall` sem supressões, Icarus e Yosys. As cinco sínteses genéricas
+passaram no `check -assert`, sem latches nas estatísticas. A avaliação de
+timing e CDC em hardware depende das análises descritas na pergunta 36.
 
 ### 36. O teste a 25 MHz e a síntese comprovam operação do MiniSoC a 2 GHz?
 
-Não. O TB usa período SCLK de 40 ns em parte dos estímulos, verificando
-funcionalmente a cadência de 25 MHz com clocks ideais. O clk de teste é
-artificial, e Yosys sintetiza lógica genérica sem biblioteca tecnológica,
-restrições IO, extração parasítica ou análise de setup/hold. Para comprovar
-2 GHz seriam necessários PDK/FPGA alvo, mapeamento, restrições corretas,
-STA e implementação física, além de CDC/RDC/MTBF e validação dos clocks.
-As frequências da arquitetura são requisitos/metas de integração, não
-resultados medidos da entrega. P27 continua aberta.
+O período de 40 ns no TB verifica o comportamento funcional do SPI com
+SCLK ideal a 25 MHz. A síntese do Yosys gera uma rede de células genéricas.
+Para avaliar a meta de 2 GHz, é preciso escolher a tecnologia ou o FPGA
+alvo, implementar o circuito e rodar STA com as
+restrições de clocks e de I/O. A etapa física inclui análise de
+CDC/RDC/MTBF e permanece aberta em P27.
 
 ### 37. Quais decisões o instrutor ainda precisa confirmar?
 
-P14 cobre posição de MISO, dummy, NOP, primeiro bit e leituras consecutivas.
-P20/P21 cobrem reset/PLL/relock e preparação com SCLK parado. P22 define
-capacidade/intervalo/overrun; P23 define status/progresso/conclusão. P24/P25
-definem resets de registros, VERSION, reservados, ERROR e concorrência.
-O contrato local lista valores concretos para reproduzir os testes, sempre
-como D21–D24. Não houve resposta atribuída ao instrutor nem aceite humano.
-Também permanecem P15–P19/P26/P27 para modos, memória e etapa física. Implementar
-uma decisão provisória não encerra a pergunta que a motivou.
+- **SPI (P14, P22)** — posição e primeiro bit em MISO, dummy, NOP,
+  leituras consecutivas, capacidade, intervalo e overrun.
+- **Reset e PLL (P20, P21)** — sequência de reset, relock e preparação do
+  mestre quando SCLK está parado.
+- **Status e controle (P23 a P25)** — publicação de progresso e conclusão,
+  valores de reset, VERSION, bits reservados, ERROR e concorrência.
+
+Os testes usam os valores provisórios definidos em D21–D24. Também seguem
+abertas P15–P19, P26 e P27, referentes aos modos, à memória e à etapa física.
 
 ### 38. Como esta etapa prepara AES, PLL e RAM para a Semana 6?
 
@@ -432,21 +390,17 @@ Um mux combinacional de clocks não substitui o protocolo seguro de handoff.
 
 ### 39. Como explicar a prioridade entre conclusão e START simultâneo?
 
-O banco considera status_valid enquanto está ocupado e usa os flags/contagem
-do snapshot de conclusão. Se o mesmo ciclo aplica um frame com START, a
-política D24 rejeita o novo comando, preservando a conclusão em vez de
-apagá-la por um novo BUSY. O TB alinha um frame válido com o status terminal,
-verifica que não houve consumo adicional de configuração e depois lê DONE
-e BLOCKS_DONE=256. Essa é uma escolha observável de concorrência, não uma
-regra aprovada silenciosamente. P25 ainda pode exigir outra prioridade.
+Pela regra provisória D24, se START chega no mesmo ciclo que a conclusão de
+uma operação ocupada, o banco registra a conclusão e rejeita START. No TB,
+essa sequência produz `DONE=1` e `BLOCKS_DONE=256`, com a quantidade de
+snapshots de configuração consumidos igual à anterior. P25 trata da
+prioridade definitiva.
 
 ### 40. Qual é a situação objetiva da entrega?
 
-O periférico, os slots/handshakes e o adaptador foram implementados e
-verificados no repositório. Lint, regressão anterior/nova, quatro mutações
-e cinco sínteses genéricas foram realmente executados. O AES anterior foi
-preservado. Porém a conclusão oficial depende de resolver o protocolo
-detalhado, integrar blocos reais, realizar análises físicas aplicáveis e
-obter avaliação do instrutor. Não há main mergeada, tag de aceite ou push
-de entrega. A apresentação deve mostrar tanto as evidências PASS quanto
-os limites D21–D24, sem transformar um protótipo local em aprovação do marco.
+O periférico SPI, o banco de registradores e o adaptador CDC passaram na
+regressão e na síntese genérica. Os testes AES anteriores também passaram.
+O protocolo detalhado segue as regras provisórias D21–D24. Ficam pendentes
+a integração com AES, PLL e RAM, as verificações físicas e o aceite do
+instrutor. Os resultados e o estado de cada critério estão no
+[relatório da Semana 5](semana_05.md).

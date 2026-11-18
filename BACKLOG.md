@@ -152,7 +152,7 @@ esta entrega técnica e não altera as datas confirmadas do cronograma.
 - [x] Preservar regressão anterior: 8.655 checks AES + quatro XOR; lint e compilação finais sem warnings.
 - [x] Executar síntese genérica SPI/CDC/AES dp/key/core com zero problemas, sem latches; sem alegação física.
 - [x] Acrescentar alvos Make, scripts Windows/logs, relatório e defesa de 40 perguntas.
-- [x] Confirmar branches pelo conector GitHub: main=46eb75d, develop=5c3a01b, divergência 2/2; Git nativo sem conectividade.
+- [x] Conferir as referências remotas `main` (`46eb75d`) e `develop` (`5c3a01b`), com dois commits exclusivos de cada lado.
 - [ ] Resolver P14/P21/P22/P24/P25 com instrutor/DV antes de fixar retorno MISO, gaps, reset e políticas oficiais.
 - [ ] Resolver P20/P23 e integrar snapshots ao engine real/PLL; adaptador isolado não encerra integração.
 - [ ] Revisar CDC/RDC físico, max delay/skew, reset de framing/IO timing e MTBF com tecnologia/restrições reais.

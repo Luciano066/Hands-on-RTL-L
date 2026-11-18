@@ -38,8 +38,9 @@ CS alto após reset e manter CS alto por pelo menos 12 ciclos ativos de clk
 entre frames. Read usa solicitação e NOP de escrita 0x3F; MISO retorna
 `{8'h00, DATA[31:0]}`. Um slot retém o comando até ack; excesso com clk parado
 é descartado e gera diagnóstico interno. P14/P20–P25 seguem abertas; esses
-detalhes não constituem um driver oficialmente aprovado. O adaptador de
-snapshots foi testado isoladamente, sem integração fictícia com AES/PLL/RAM.
+detalhes ainda dependem da revisão do instrutor. Os testes do adaptador de
+snapshots cobrem as interfaces em `clk` e `sys_clk`. A integração com AES,
+PLL e RAM fica para uma etapa posterior.
 
 Em **30/10/2026**, o desafio obrigatório acrescenta três módulos
 combinacionais com os nomes `minisoc_aes_sbox`, `minisoc_aes_sub_bytes` e

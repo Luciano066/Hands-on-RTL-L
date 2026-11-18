@@ -2,63 +2,43 @@
 
 Data: 18/11/2026. Base: `5c3a01b17cd7d672c856087baa5fa0466cabdf5a`.
 Branch: `feat/w05-spi-control-cdc`.
-**Implementação local validada; protocolo detalhado provisório e aceite do
-instrutor pendente. Não constitui aprovação oficial da Semana 5.**
+**Implementação validada em simulação. O protocolo detalhado é provisório e
+o aceite do instrutor está pendente.**
 
 ## 1. Objetivo e escopo
 
-Implementar o periférico SPI de configuração/status, banco always-on e
-transporte coerente de comandos e snapshots entre clocks independentes.
-Reutilizar a base AES das Semanas 3–4 sem modificar datapath, package,
-expansão, core, vetores ou testbenches anteriores. O adaptador clk↔sys_clk
-é verificável isoladamente; não há AES/PLL/RAM conectados nem SoC integrado.
+A Semana 5 implementa o periférico SPI, o banco de registradores no domínio
+always-on e o transporte de comandos e snapshots entre clocks independentes.
+O adaptador `clk`↔`sys_clk` foi validado isoladamente. Sua conexão com o AES,
+a PLL e a RAM fica para a integração do SoC.
 
-Fonte funcional disponível nesta execução: arquitetura v1.1, pendências,
-contrato da Semana 4 e pedido recebido. O Block Guide original confidencial
-não foi reintroduzido nem publicado. Detalhes ainda OPEN foram tratados
-como decisões D, sem atribuí-los ao instrutor.
+Os requisitos vêm da [arquitetura v1.1](../architecture/arquitetura_v1.1.md).
+As questões ainda abertas estão em [pendencias.md](../spec/pendencias.md).
+As escolhas locais para esta implementação estão identificadas como D21–D24.
 
 ## 2. Auditoria antes de editar
 
-Raiz: `C:/Users/Luciano/Desktop/aes_spi_rtl/semana_01_aes_spi`.
-Branch inicial develop, HEAD `5c3a01b`, index/árvore limpos e nenhum arquivo
-não rastreado. Foram lidos README, BACKLOG, Makefile, arquitetura v1.1,
-pendencias.md, relatório/contrato da Semana 4, scripts de execução/ativação
-e RTL/TBs AES. O fluxo portátil já estava instalado; não houve reinstalação.
+A branch de trabalho partiu de `develop` em `5c3a01b`, com a árvore limpa.
+Nessa revisão, `develop` incluía o desafio combinacional (`a81d782`) e as
+atualizações de cronograma (`5c3a01b`). A `main`, em `46eb75d`, tinha dois
+commits documentais próprios. As referências remotas conferiam com as locais
+e a divergência era de dois commits por lado.
+[Comparação entre main e develop](https://github.com/Luciano066/Hands-on-RTL-L/compare/main...develop).
 
-A main local estava em `46eb75d`; origin/main e origin/develop coincidiam
-com as respectivas branches locais. `git rev-list --left-right --count
-main...develop` retornou **2 / 2**. Desenvolvimentos exclusivos da develop:
-`a81d782` (desafio combinacional) e `5c3a01b` (cronograma/contatos). Exclusivos
-da main: `e17ed50` e `46eb75d`, ajustes documentais. A branch nova parte da
-develop para preservar o desafio e o planejamento mais recentes, sem merge
-automático. O histórico comum contém a implementação AES da Semana 4.
+A busca na árvore, no diretório pai, nos anexos disponíveis e no histórico
+local não encontrou RTL SPI anterior nem `semana_05_spi_rx_cdc.patch`.
+Os hashes SHA256 dos **53 arquivos versionados** da base foram registrados
+em `build/w05_baseline.json`.
 
-`git ls-remote origin refs/heads/main refs/heads/develop` falhou: conexão a
-github.com:443 indisponível para o Git nativo. Na auditoria final, o conector
-GitHub confirmou remotamente main=`46eb75d` e develop idêntica ao SHA completo
-`5c3a01b`, com divergência **2 ahead / 2 behind**, coerente com as referências
-locais. Foram usadas comparações main→develop e 5c3a01b→develop, esta última
-retornando identical/0/0. Veja a
-[comparação remota](https://github.com/Luciano066/Hands-on-RTL-L/compare/main...develop).
-Não houve fetch/push; as consultas do conector foram somente leitura.
-
-Não foram encontrados RTL SPI, desenvolvimento parcial ou
-`semana_05_spi_rx_cdc.patch` na árvore, no diretório pai pesquisado, nos
-anexos disponíveis ou no histórico local pesquisado por caminhos SPI.
-Essa constatação se limita aos locais inspecionados. Não foi aplicado patch.
-Foram registrados hashes SHA256 dos **53 arquivos versionados** da base em
-`build/w05_baseline.json`, ignorado pelo Git.
-
-Regressão inicial efetivamente executada antes de editar:
+A regressão da base foi executada com o toolchain portátil já instalado.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_aes_tests.ps1 -Clean
 ```
 
-Exit 0, quatro XOR e **8.655 checks AES**: 647 transforms + 2.345 datapath +
-535 Key Expansion + 5.128 core, sem warnings. O total histórico 8.008 da
-Semana 4 não inclui o desafio posterior de 647 checks; ambos foram preservados.
+Passaram quatro casos XOR e **8.655 checks AES** (647 de transformações,
+2.345 de datapath, 535 de Key Expansion e 5.128 de core), sem warnings.
+O total da Semana 4 era 8.008, antes do desafio de transformações.
 
 ## 3. Requisitos confirmados e decisões provisórias
 
@@ -83,13 +63,12 @@ As decisões detalhadas e portas estão no
 | D24 | Reservados ignorados/read zero, START read zero, ERROR sticky até START válido/reset | P24: políticas oficiais |
 | D24 | START ocupado rejeitado; banco pode mudar, snapshot fica congelado; conclusão vence START simultâneo | P25: concorrência oficial |
 
-Escritas RO, endereço inválido e RSV=1 não modificam registros. Geram pulso
-interno de rejeição, sem inventar código de erro ou registro SPI novo. Um
-START com N inválido ou modo 6/7 seta AES_STATUS.ERROR sem processamento.
-Ele preserva DONE e contagem anteriores. Um START válido aceito limpa
-DONE/ERROR/contagem e seta BUSY. SYSTEM_CONTROL pode ser escrito durante
-BUSY; esses bits ainda não controlam clock/RAM reais. Segurança de ownership
-e mudança de divisor durante operação permanece bloqueada por P19/P20/P25.
+Escritas em registradores RO, endereços inválidos e frames com RSV=1 geram
+um pulso interno de rejeição e preservam o banco. Um START com NUM_BLOCKS
+fora de 1..256 ou modo 6/7 seta AES_STATUS.ERROR e preserva DONE e a contagem
+anterior. Ao aceitar um START válido, o banco limpa DONE, ERROR e a contagem,
+e seta BUSY. Escritas em SYSTEM_CONTROL durante BUSY atualizam o banco.
+O controle de ownership e da mudança de divisor depende de P19/P20/P25.
 
 ## 4. Arquitetura, FSMs e handshakes
 
@@ -104,11 +83,10 @@ então confirma ack. O banco aplica o comando na borda seguinte. Isso permite
 rejeitar frames longos sem precisar de clocks SCLK depois da transação. O
 intervalo provisório de 12 ciclos clk inclui esse pipeline.
 
-hold_q e long_q não podem ser sobrescritos enquanto req difere do ack
-sincronizado. Se clk parar, o primeiro comando fica retido. Um segundo frame
-completo não alterna req e seta overrun; não há promessa de entrega para
-tráfego que exceda a capacidade. O teste demonstra esse limite, em vez de
-assumir que qualquer toggle conserva eventos ilimitadamente.
+O slot retém `hold_q` e `long_q` enquanto `req` difere do `ack`
+sincronizado. Se `clk` parar com um candidato no slot, o próximo frame
+completo é descartado e seta `overrun`. O toggle e o primeiro frame ficam
+retidos até o ACK.
 
 No read, o banco captura response_q e mantém pending. Após oito clocks de
 header do NOP, o serializador carrega os dados na descida e transmite MSB-first.
@@ -116,11 +94,12 @@ A confirmação de consumo é o próprio NOP completo cruzando de volta para
 clk. Abort/overlength não liberam resposta. Escritas posteriores não mudam
 o dado já capturado. Não se sincroniza um barramento por FF em cada bit.
 
-`minisoc_cdc_mailbox` congela o vetor antes de publicar req, sincroniza req,
-faz guarda, apresenta valid/data estáveis e só confirma ack quando ready
-consome o vetor. O adaptador usa uma mailbox clk→sys_clk para KEY/IV/COUNTER/
-N/MODE/DECRYPT e outra sys_clk→clk para status. Os TBs usam filas independentes;
-não instanciam um engine fictício para alegar integração AES concluída.
+`minisoc_cdc_mailbox` congela o vetor na borda em que alterna `req`. O
+destino sincroniza `req`, aguarda um ciclo de guarda e mantém `valid` e os
+dados estáveis até o consumo. Nesse ponto, devolve `ack`. O adaptador usa
+uma mailbox de `clk` para `sys_clk` com KEY, IV, COUNTER, NUM_BLOCKS, MODE e
+DECRYPT, e outra no sentido inverso para status. O testbench confere cada
+direção com uma fila independente.
 
 Reset é assert assíncrono e release local sincronizado. Com SCLK parado, a
 parte serial permanece em reset até o mestre fornecer os clocks de preparação
@@ -199,37 +178,26 @@ Cobertura dirigida executada:
   valid/data retidos, ready/ack, clocks pausados, sys_clk mais rápido/lento
   que clk, frequências variáveis e nove cortes de reset, seguidos de recuperação.
 
-Há **quatro mutações funcionais detectadas** em cópias locais sob build:
-posição TX, NUM_BLOCKS truncado, troca de palavras e overwrite do slot.
-Todas compilaram e foram rejeitadas pelos TBs com exit 1 e `$fatal`; não se
-confundiu falha de compilação com detecção funcional. Fontes entregues intactas.
-Scripts/resultados dessa campanha auxiliar: build/w05_mutations.ps1 e .json.
+Os testbenches detectaram **quatro falhas deliberadas** em cópias locais sob
+`build/`: posição incorreta no TX, truncamento de NUM_BLOCKS, troca de KEY0
+com KEY1 e sobrescrita do slot. Cada cópia compilou e falhou em
+simulação com `$fatal` e código de saída 1. Os arquivos locais da campanha
+são `build/w05_mutations.ps1` e `build/w05_mutations.json`.
 
 ## 8. Comandos, ambiente e resultados reais
 
-Os comandos de shell da sessão foram invocados através do prefixo RTK,
-conforme instrução do ambiente. Abaixo, os comandos internos reproduzíveis:
-
-```text
-git status --short
-git branch -avv
-git log --left-right --oneline main...develop
-git ls-remote origin refs/heads/main refs/heads/develop
-git switch -c feat/w05-spi-control-cdc
-```
+Na raiz do projeto, os scripts da Semana 5 executam as suítes SPI/CDC e a
+regressão completa com síntese, conforme as opções abaixo.
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_aes_tests.ps1 -Clean
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_spi_tests.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_spi_tests.ps1 -Synthesis
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/validate_week05.ps1 -Synthesis
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File build/w05_mutations.ps1
 ```
 
 Após ativação portátil: `make -j4 regression`, `make test-spi`,
-`make test-spi-cdc`, `make synth-spi synth-aes`, `git diff --check` e
-auditoria de hashes/links. Não se mudou política global do PowerShell.
-`-ExecutionPolicy Bypass` vale apenas para o processo invocado.
+`make test-spi-cdc` e `make synth-spi synth-aes`. A opção
+`-ExecutionPolicy Bypass` se aplica ao processo PowerShell invocado.
 
 | Ferramenta | Versão observada |
 |---|---|
@@ -238,7 +206,7 @@ auditoria de hashes/links. Não se mudou política global do PowerShell.
 | Icarus/vvp | 14.0 devel, s20260301-500-g2e81fcccb-dirty |
 | Yosys | 0.69+154, git 30d62572e-dirty; frontend slang |
 
-| Verificação final | Resultado efetivamente observado |
+| Verificação final | Resultado |
 |---|---|
 | Lint RTL anterior e SPI/CDC | Exit 0, Verilator -Wall, sem warnings e sem supressão |
 | Compilação Icarus -Wall | Exit 0, sem warnings na versão final |
@@ -253,52 +221,38 @@ auditoria de hashes/links. Não se mudou política global do PowerShell.
 | Latches | Nenhuma célula de latch nas estatísticas finais das cinco sínteses |
 | Mutações auxiliares | Quatro falhas deliberadas detectadas funcionalmente |
 
-Logs locais ignorados: build/w05_versions.log, w05_regression.log,
-w05_synthesis.log, spi_synth.log, spi_cdc_synth.log e aes_{dp,key,core}_synth.log.
-Os valores de células são genéricos; não são área física ou métrica de PDK.
+Os logs de versões, regressão e síntese ficam em `build/` com os nomes
+`w05_versions.log`, `w05_regression.log`, `w05_synthesis.log`,
+`spi_synth.log`, `spi_cdc_synth.log` e `aes_{dp,key,core}_synth.log`.
 
 ## 9. Problemas encontrados e correções
 
-A primeira tentativa de consultar o remoto falhou por conectividade do Git
-nativo; o conector GitHub permitiu confirmar as branches na auditoria final.
-A criação da branch precisou da autorização de escrita em metadados Git do
-ambiente e então foi concluída; nenhum arquivo foi descartado.
+A elaboração no Slang rejeitou dois controles assíncronos na mesma lista
+de eventos com condição composta. O framing passou a usar uma rede de reset
+combinacional única. Para resolver os avisos de lint, o shift de recepção
+passou a guardar 39 bits e os estágios do sincronizador de reset passaram a
+usar sinais distintos.
 
-Na implementação inicial, o lint detectou um bit de shift não utilizado,
-agrupamento de bits do reset que gerava diagnóstico e CS usado como controle
-assíncrono e síncrono. A síntese slang rejeitou a lista de eventos com dois
-resets e condição composta. O reset de framing foi expresso por uma única
-rede combinacional de reset, sem mexer em clocks. O shift passou a reter os
-39 bits anteriores. **A solução final usa lint estrito sem exceções/filtros.**
+No Icarus, uma constante do testbench excedia a largura declarada e
+`always_comb` produzia diagnósticos de sensibilidade ao selecionar posições
+do banco. A constante foi ajustada e o mux de leitura passou a usar
+atribuições contínuas.
 
-Icarus também indicou excesso de dígitos numa constante do TB e sua limitação
-de sensibilidade de always_comb com seleção/array. A constante foi corrigida;
-o mux de leitura usa atribuições contínuas. Não se suprimiu warning de RTL.
-
-O primeiro teste iniciou reset em nível baixo sem uma borda observável pelo
-simulador no domínio parado; req permaneceu X. O TB passou a gerar uma
-asserção explícita 1→0 de reset, inclusive sem SCLK, antes de testar release.
-Isso evita dependência de valores iniciais implícitos na simulação.
-
-Na coleta inicial, a saída extremamente extensa do Yosys foi preservada em
-logs. O wrapper final escreve o conteúdo completo em build e mostra um
-resumo, mantendo exit codes reais. Informações de versão em stderr não são
-classificadas como falhas funcionais. A compilação, os TBs e a síntese foram
-reexecutados após as correções.
+Com SCLK parado, manter reset em zero desde o início da simulação deixou
+`req` em X. O testbench passou a aplicar a transição 1→0 explicitamente
+antes de verificar a liberação do reset. Após os ajustes, lint, compilação,
+testes e síntese foram executados novamente.
 
 ## 10. Auditoria final, limitações e pendências
 
 Os 53 hashes da base conferiram **50 arquivos idênticos** e três alterações
 deliberadas: Makefile/README/BACKLOG. O contrato v1.1, contratos/relatórios
 antigos, RTL/TBs AES e scripts anteriores foram preservados byte a byte.
-A auditoria leu 27 Markdown e conferiu 116 links locais, sem anexos
-confidenciais selecionados. Resultados detalhados estão em
-build/w05_audit.json; `git diff --check` foi executado sem erros.
-
-O commit `b35e526` contém RTL/testes/fluxo/contrato. O commit documental
-seguinte contém relatório/defesa e atualização de situação; seu hash pode
-ser consultado com `git log -2 --oneline` na branch. Não há merge na main,
-tag de aceite ou push.
+A auditoria da entrega inicial conferiu 116 links locais em 27 arquivos
+Markdown e passou em `git diff --check`. O script de auditoria grava os
+resultados da execução mais recente em `build/w05_audit.json`.
+O commit `b35e526` registra RTL, testes, fluxo e contrato. O commit
+`f395af6` registra a versão inicial do relatório e da defesa.
 
 Limitações materiais:
 
@@ -315,10 +269,10 @@ Limitações materiais:
 - O teste com SCLK de 25 MHz valida a simulação funcional nessa cadência;
   síntese genérica não comprova IO timing a 25 MHz nem clk a 2 GHz.
 
-P14/P20/P21/P22/P23/P24/P25 exigem instrutor/DV antes de congelar o driver e
-a integração. P15–P19/P26/P27 permanecem abertas para modos, memória, reset
-em escrita e etapa física. Nenhuma pendência foi encerrada por implementação
-unilateral. Contato com DV, apresentação e aceite humano não foram registrados.
+As decisões sobre o driver e a integração dependem da revisão de P14 e
+P20–P25 pelo instrutor e por DV. P15–P19, P26 e P27 tratam dos modos, da
+memória, do reset em escrita e da etapa física. O contato com DV, a
+apresentação e o aceite seguem sem registro.
 
 ## 11. Critérios de aceite e próximos passos
 
